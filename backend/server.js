@@ -30,14 +30,21 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
 app.use(
   cors({
     origin: (origin, cb) => {
+      // Non-browser callers (curl, Meta webhooks, server-to-server) → allow.
       if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      if (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost(:\d+)?$/.test(origin)) {
-        return cb(null, true);
-      }
+      // If no allowlist is configured, reflect the origin (fail-open). The
+      // API uses Bearer-token auth so cross-origin requests are safe even
+      // without an explicit list.
+      if (allowedOrigins.length === 0) return cb(null, origin);
+      if (allowedOrigins.includes(origin)) return cb(null, origin);
+      // Always permit localhost during local dev.
+      if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, origin);
+      // Permit any *.vercel.app preview deploy of this admin (so Vercel
+      // preview URLs work without manually whitelisting each one).
+      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) return cb(null, origin);
       return cb(new Error('CORS blocked: ' + origin));
     },
-    credentials: true,
+    credentials: false,
   })
 );
 
