@@ -107,9 +107,13 @@ async function loadAllImages() {
       const url = map[k];
       if (!url) return [k, ''];
       const isIcon = k.startsWith('icon_');
+      // Banners (welcome banner + per-service banners) are the visual hero —
+      // serve them at 2x retina (2000×250) at near-lossless q92 (≈200 KB JPG).
+      // Icons stay small because up to 9 of them ship in the same response;
+      // keeping them at 160×160 q70 (≈4-5 KB each) leaves room for the banner.
       const opts = isIcon
-        ? { width: 200, height: 200, crop: 'fill', quality: 75, format: 'jpg' }
-        : { width: 1000, height: 125, crop: 'fill', quality: 70, format: 'jpg' };
+        ? { width: 160, height: 160, crop: 'fill', quality: 70, format: 'jpg' }
+        : { width: 2000, height: 250, crop: 'fill', quality: 92, format: 'jpg' };
       const b64 = await urlToBase64(url, opts);
       return [k, b64];
     })
