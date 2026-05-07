@@ -10,6 +10,8 @@
     "flow:upload-key": "node scripts/upload-public-key.js",
     "flow:create": "node scripts/create-flow.js",
     "flow:setup": "node scripts/setup-all.js",
+    "flow:update": "node scripts/update-flow.js",
+    "flow:publish": "node scripts/publish-flow.js",
     "seed:admin": "node scripts/seed-admin.js",
     "templates:sync": "node scripts/sync-templates.js"
   },

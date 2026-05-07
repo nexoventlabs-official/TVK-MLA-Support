@@ -106,16 +106,21 @@ async function loadAllImages() {
     keys.map(async (k) => {
       const url = map[k];
       if (!url) return [k, ''];
-      const isIcon = k.startsWith('icon_');
-      // Budget per Flow response (Meta encrypted payload limit ≈ 250 KB):
-      //   • Banner: 1600×200 q82 JPG → ~100 KB
-      //   • Icons:  200×200  q80 JPG → ~8 KB each
-      // With this budget a SERVICE_SELECT screen with 15+ services still
-      // fits comfortably (100 + 15×8 ≈ 220 KB), leaving room for new
-      // services to be added without hitting the cap.
-      const opts = isIcon
-        ? { width: 200, height: 200, crop: 'fill', quality: 80, format: 'jpg' }
-        : { width: 1600, height: 200, crop: 'fill', quality: 82, format: 'jpg' };
+      // Per-key encoding strategy (Meta payload cap ≈ 250 KB per Flow response):
+      //   • Welcome banner — shipped ALONE on the WELCOME screen, so we can
+      //     spend the full budget on it: 2000×280 q92 JPG → ~230 KB.
+      //   • Service banners — shown alongside option icons on OPTION_SELECT,
+      //     so kept smaller: 1600×200 q82 JPG → ~100 KB.
+      //   • Icons (service + option) — up to ~15 of them per screen, so
+      //     200×200 q80 JPG → ~8 KB each (fits 15+ icons easily).
+      let opts;
+      if (k === 'flow_welcome_banner') {
+        opts = { width: 2000, height: 280, crop: 'fill', quality: 92, format: 'jpg' };
+      } else if (k.startsWith('banner_')) {
+        opts = { width: 1600, height: 200, crop: 'fill', quality: 82, format: 'jpg' };
+      } else {
+        opts = { width: 200, height: 200, crop: 'fill', quality: 80, format: 'jpg' };
+      }
       const b64 = await urlToBase64(url, opts);
       return [k, b64];
     })
@@ -211,14 +216,16 @@ function sendResponse(res, obj, aesKeyBuffer, ivBuffer) {
 }
 
 /* ───────── INIT ───────── */
+// The initial response carries ONLY the welcome banner — no other images.
+// This lets us serve a high-quality 230 KB banner without bumping into
+// Meta's per-response payload cap.
 async function handleInit(_flow_token) {
   const images = await loadAllImages();
   return {
-    screen: 'SERVICE_SELECT',
+    screen: 'WELCOME',
     data: {
       welcome_banner: images.flow_welcome_banner || '',
       has_welcome_banner: !!images.flow_welcome_banner,
-      services: buildServiceList(images),
     },
   };
 }
@@ -227,6 +234,16 @@ async function handleInit(_flow_token) {
 async function handleDataExchange({ screen, data, flow_token }) {
   const phone = phoneFromToken(flow_token);
   const images = await loadAllImages();
+
+  // ─── WELCOME → SERVICE_SELECT (lazy-load service icons) ───
+  if (screen === 'WELCOME') {
+    return {
+      screen: 'SERVICE_SELECT',
+      data: {
+        services: buildServiceList(images),
+      },
+    };
+  }
 
   // ─── SERVICE_SELECT → OPTION_SELECT ───
   if (screen === 'SERVICE_SELECT') {
