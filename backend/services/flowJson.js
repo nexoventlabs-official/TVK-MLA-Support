@@ -1,18 +1,14 @@
 /**
  * Builds the Endpoint-mode Flow JSON for the TVK grievance welcome flow.
  *
- * Single flow, multiple screens. Backend `INIT` returns the WELCOME screen.
+ * Single flow, multiple screens. Backend `INIT` returns the Service-Select screen.
  * Each `data_exchange` returns the next screen with dynamic content (icons, banners,
  * sub-options) embedded as base64.
  *
  * Screens
- *  ─ WELCOME          high-quality welcome banner only (no other images) →
- *                     "Choose Service" CTA navigates to SERVICE_SELECT.
- *                     Splitting the banner onto its own screen keeps the
- *                     SERVICE_SELECT response well under Meta's payload cap.
- *  ─ SERVICE_SELECT   service radio list with icons (no banner)
- *  ─ OPTION_SELECT    small service banner + dynamic options for the picked service
- *  ─ DETAILS          form: name + description (+ optional location)
+ *  ─ SERVICE_SELECT   banner + 9 services radio list
+ *  ─ OPTION_SELECT    banner + dynamic options for the selected service
+ *  ─ DETAILS          form: description (+ optional location)
  *  ─ INFO             terminal "thank you" screen
  */
 
@@ -21,56 +17,19 @@ function buildFlowJSON() {
     version: '7.0',
     data_api_version: '3.0',
     routing_model: {
-      WELCOME: ['SERVICE_SELECT'],
       SERVICE_SELECT: ['OPTION_SELECT', 'INFO'],
       OPTION_SELECT: ['DETAILS', 'INFO'],
       DETAILS: ['INFO'],
       INFO: [],
     },
     screens: [
-      // ─── WELCOME (banner-only, lets us send a high-quality 230 KB banner) ───
-      {
-        id: 'WELCOME',
-        title: 'TVK Grievance',
-        data: {
-          welcome_banner: { type: 'string', __example__: 'iVBORw0KGgo' },
-          has_welcome_banner: { type: 'boolean', __example__: true },
-        },
-        layout: {
-          type: 'SingleColumnLayout',
-          children: [
-            {
-              type: 'Image',
-              src: '${data.welcome_banner}',
-              width: 1600,
-              height: 280,
-              'scale-type': 'cover',
-              'alt-text': 'TVK Public Grievance Service',
-              visible: '${data.has_welcome_banner}',
-            },
-            { type: 'TextHeading', text: 'TVK Public Grievance' },
-            {
-              type: 'TextBody',
-              text:
-                'Vanakkam 🙏\n\nTap *Choose Service* below to raise a grievance for any of the TVK citizen services — Civic Works, Revenue, Health, Education, Ration, Agriculture, Law & Order, Employment or Personal Assistance.',
-            },
-            {
-              type: 'Footer',
-              label: 'Choose Service',
-              'on-click-action': {
-                name: 'data_exchange',
-                payload: { action: 'open_services' },
-              },
-            },
-          ],
-        },
-      },
-
-      // ─── SERVICE_SELECT (icons only, no banner — keeps payload tiny) ───
+      // ─── SERVICE_SELECT ───
       {
         id: 'SERVICE_SELECT',
         title: 'Choose Service',
         data: {
+          welcome_banner: { type: 'string', __example__: 'iVBORw0KGgo' },
+          has_welcome_banner: { type: 'boolean', __example__: true },
           services: {
             type: 'array',
             items: {
@@ -91,15 +50,20 @@ function buildFlowJSON() {
         layout: {
           type: 'SingleColumnLayout',
           children: [
-            { type: 'TextHeading', text: 'Choose a Service' },
             {
-              type: 'TextBody',
-              text: 'Select the service you need help with — we will route your request to the right team.',
+              type: 'Image',
+              src: '${data.welcome_banner}',
+              width: 1000,
+              height: 125,
+              'scale-type': 'cover',
+              'alt-text': 'Welcome to TVK',
+              visible: '${data.has_welcome_banner}',
             },
+            { type: 'TextBody', text: 'Welcome to TVK Grievance Service 🇮🇳' },
             {
               type: 'RadioButtonsGroup',
               name: 'selected_service',
-              label: 'Citizens Services',
+              label: 'Select a service',
               required: true,
               'data-source': '${data.services}',
             },
