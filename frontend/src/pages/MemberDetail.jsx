@@ -43,17 +43,18 @@ export default function MemberDetail() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-brand-900">{display}</h1>
               {m.isRegistered ? (
-                <Link
-                  to={`/voters/${m._id}`}
-                  className={`pill inline-flex items-center gap-1 ${
-                    m.registrationType === 'epic'
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                      : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                  }`}
-                >
-                  <ShieldCheck size={12} />
-                  {m.registrationType === 'epic' ? 'EPIC Verified' : 'Manual'}
-                </Link>
+                m.registrationType === 'epic' && m.epicNo ? (
+                  <Link
+                    to={`/voters/${m.epicNo}`}
+                    className="pill inline-flex items-center gap-1 bg-green-100 text-green-700 hover:bg-green-200"
+                  >
+                    <ShieldCheck size={12} /> EPIC Verified
+                  </Link>
+                ) : (
+                  <span className="pill inline-flex items-center gap-1 bg-amber-100 text-amber-700">
+                    <ShieldCheck size={12} /> Manual
+                  </span>
+                )
               ) : (
                 <span className="pill bg-gray-100 text-gray-500">Not registered</span>
               )}

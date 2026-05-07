@@ -99,4 +99,124 @@ function clean(v) {
   return s;
 }
 
-module.exports = { getConnection, findVoterByEpic, normalizeVoter };
+/** Return the list of assembly collections in the voter DB (sorted). */
+async function listAssemblyCollections() {
+  const conn = await getConnection();
+  const colls = await conn.db.listCollections().toArray();
+  return colls
+    .map((c) => c.name)
+    .filter((n) => !n.startsWith('system.'))
+    .sort();
+}
+
+/**
+ * Paginated voter listing across all assembly collections.
+ *
+ * @param {object} opts
+ * @param {string} [opts.q]         substring search across name / EPIC / relation / mobile
+ * @param {string} [opts.assembly]  restrict to a single collection (e.g. 'ass_25')
+ * @param {number} [opts.page=1]    1-indexed page number
+ * @param {number} [opts.limit=50]  page size (max 200)
+ * @returns {Promise<{ items, total, page, limit, collections }>}
+ */
+async function listVoters({ q = '', assembly = '', page = 1, limit = 50 } = {}) {
+  const conn = await getConnection();
+  const all = await listAssemblyCollections();
+  const targets = assembly ? all.filter((n) => n === assembly) : all;
+
+  const filter = {};
+  if (q) {
+    const re = new RegExp(escapeRegex(String(q).trim()), 'i');
+    filter.$or = [
+      { VOTER_NAME: re },
+      { EPIC_NO: re },
+      { RELATION_NAME: re },
+      { MOBILE_NUMBER: re },
+      { HOUSE_NO: re },
+    ];
+  }
+
+  // Per-collection counts so we can paginate across the union without loading
+  // every doc into memory.
+  const counts = await Promise.all(
+    targets.map((name) => conn.db.collection(name).countDocuments(filter))
+  );
+  const total = counts.reduce((a, b) => a + b, 0);
+
+  let skip = Math.max(0, (page - 1) * limit);
+  let take = limit;
+  const items = [];
+  for (let i = 0; i < targets.length && take > 0; i++) {
+    const name = targets[i];
+    const collTotal = counts[i];
+    if (skip >= collTotal) {
+      skip -= collTotal;
+      continue;
+    }
+    const docs = await conn.db
+      .collection(name)
+      .find(filter)
+      .sort({ _id: 1 })
+      .skip(skip)
+      .limit(take)
+      .toArray();
+    skip = 0;
+    for (const d of docs) {
+      items.push({ ...normalizeVoter(d, name), _id: String(d._id) });
+    }
+    take -= docs.length;
+  }
+
+  return { items, total, page, limit, collections: all };
+}
+
+/**
+ * Look up a voter by their Mongo `_id` (string ObjectId) OR by EPIC number.
+ * Searches all assembly collections.
+ */
+async function findVoterById(idOrEpic) {
+  if (!idOrEpic) return null;
+  const conn = await getConnection();
+  const all = await listAssemblyCollections();
+
+  const mongoose = require('mongoose');
+  let oid = null;
+  if (typeof idOrEpic === 'string' && mongoose.isValidObjectId(idOrEpic)) {
+    try {
+      oid = new mongoose.Types.ObjectId(idOrEpic);
+    } catch {}
+  }
+  const epicGuess = String(idOrEpic).trim().toUpperCase();
+
+  for (const name of all) {
+    let doc = null;
+    if (oid) {
+      doc = await conn.db.collection(name).findOne({ _id: oid });
+    }
+    if (!doc) {
+      doc = await conn.db.collection(name).findOne({ EPIC_NO: epicGuess });
+    }
+    if (!doc) {
+      doc = await conn.db
+        .collection(name)
+        .findOne({ EPIC_NO: { $regex: `^${escapeRegex(epicGuess)}$`, $options: 'i' } });
+    }
+    if (doc) {
+      return {
+        ...normalizeVoter(doc, name),
+        _id: String(doc._id),
+        raw: doc,
+      };
+    }
+  }
+  return null;
+}
+
+module.exports = {
+  getConnection,
+  findVoterByEpic,
+  findVoterById,
+  listVoters,
+  listAssemblyCollections,
+  normalizeVoter,
+};
