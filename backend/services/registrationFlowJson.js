@@ -1,0 +1,252 @@
+/**
+ * Endpoint-mode Flow JSON for the TVK Voter Registration flow.
+ *
+ * Sent to a WhatsApp user the first time they message the bot, before they
+ * can access the grievance flow. Reuses the same banner image key as the
+ * grievance flow so admins manage one image.
+ *
+ * Screens
+ *  ─ REG_START    EPIC + DOB inputs, "Don't have EPIC?" link → REG_MANUAL
+ *  ─ REG_CONFIRM  shows voter details fetched from the read-only voter DB
+ *  ─ REG_MANUAL   manual form (name, email, dob, gender) when no EPIC
+ *  ─ REG_DONE     terminal "thank you" screen
+ */
+
+function buildRegistrationFlowJSON() {
+  return {
+    version: '7.0',
+    data_api_version: '3.0',
+    routing_model: {
+      REG_START: ['REG_CONFIRM', 'REG_MANUAL', 'REG_DONE'],
+      REG_CONFIRM: ['REG_DONE'],
+      REG_MANUAL: ['REG_DONE'],
+      REG_DONE: [],
+    },
+    screens: [
+      // ─── REG_START ───
+      {
+        id: 'REG_START',
+        title: 'Register',
+        data: {
+          welcome_banner: { type: 'string', __example__: 'iVBORw0KGgo' },
+          has_welcome_banner: { type: 'boolean', __example__: true },
+          error_text: { type: 'string', __example__: '' },
+          has_error: { type: 'boolean', __example__: false },
+        },
+        layout: {
+          type: 'SingleColumnLayout',
+          children: [
+            {
+              type: 'Image',
+              src: '${data.welcome_banner}',
+              width: 1000,
+              height: 125,
+              'scale-type': 'cover',
+              'alt-text': 'TVK Public Grievance',
+              visible: '${data.has_welcome_banner}',
+            },
+            { type: 'TextHeading', text: 'Voter Registration' },
+            {
+              type: 'TextBody',
+              text:
+                'Vanakkam 🙏\n\nPlease register once to access TVK Public Grievance services. Enter your *EPIC (Voter ID)* number and *Date of Birth* below.',
+            },
+            {
+              type: 'TextBody',
+              text: '⚠️ ${data.error_text}',
+              visible: '${data.has_error}',
+            },
+            {
+              type: 'TextInput',
+              name: 'epic_no',
+              label: 'EPIC Number',
+              required: true,
+              'helper-text': 'e.g. RJE0667071',
+              'input-type': 'text',
+            },
+            {
+              type: 'DatePicker',
+              name: 'dob',
+              label: 'Date of Birth',
+              required: true,
+              'helper-text': 'DD / MM / YYYY',
+            },
+            {
+              type: 'Footer',
+              label: 'Continue',
+              'on-click-action': {
+                name: 'data_exchange',
+                payload: {
+                  action: 'lookup_epic',
+                  epic_no: '${form.epic_no}',
+                  dob: '${form.dob}',
+                },
+              },
+            },
+            {
+              type: 'EmbeddedLink',
+              text: "Don't have EPIC? Register Manually",
+              'on-click-action': {
+                name: 'data_exchange',
+                payload: { action: 'goto_manual' },
+              },
+            },
+          ],
+        },
+      },
+
+      // ─── REG_CONFIRM ───
+      {
+        id: 'REG_CONFIRM',
+        title: 'Confirm',
+        data: {
+          voter_name: { type: 'string', __example__: 'Chitra' },
+          epic_no: { type: 'string', __example__: 'RJE0667071' },
+          relation_label: { type: 'string', __example__: 'Husband' },
+          relation_name: { type: 'string', __example__: 'Mohan' },
+          gender: { type: 'string', __example__: 'Female' },
+          house_no: { type: 'string', __example__: '1' },
+          assembly: { type: 'string', __example__: 'Mylapore (25)' },
+          dob_label: { type: 'string', __example__: '15-05-1990' },
+        },
+        layout: {
+          type: 'SingleColumnLayout',
+          children: [
+            { type: 'TextHeading', text: 'Confirm Your Details' },
+            {
+              type: 'TextBody',
+              text:
+                'We found the following voter record. Please confirm to complete registration.',
+            },
+            { type: 'TextBody', text: '*Name:* ${data.voter_name}' },
+            { type: 'TextBody', text: '*EPIC No:* ${data.epic_no}' },
+            { type: 'TextBody', text: '*${data.relation_label}:* ${data.relation_name}' },
+            { type: 'TextBody', text: '*Gender:* ${data.gender}' },
+            { type: 'TextBody', text: '*Date of Birth:* ${data.dob_label}' },
+            { type: 'TextBody', text: '*House No:* ${data.house_no}' },
+            { type: 'TextBody', text: '*Assembly:* ${data.assembly}' },
+            {
+              type: 'Footer',
+              label: 'Confirm & Register',
+              'on-click-action': {
+                name: 'data_exchange',
+                payload: { action: 'save_epic' },
+              },
+            },
+          ],
+        },
+      },
+
+      // ─── REG_MANUAL ───
+      {
+        id: 'REG_MANUAL',
+        title: 'Register',
+        data: {
+          welcome_banner: { type: 'string', __example__: 'iVBORw0KGgo' },
+          has_welcome_banner: { type: 'boolean', __example__: true },
+          init_phone: { type: 'string', __example__: '919999999999' },
+        },
+        layout: {
+          type: 'SingleColumnLayout',
+          children: [
+            {
+              type: 'Image',
+              src: '${data.welcome_banner}',
+              width: 1000,
+              height: 125,
+              'scale-type': 'cover',
+              'alt-text': 'TVK Public Grievance',
+              visible: '${data.has_welcome_banner}',
+            },
+            { type: 'TextHeading', text: 'Register Manually' },
+            {
+              type: 'TextBody',
+              text:
+                'Fill in your details below. Your WhatsApp number is used as your registered mobile.',
+            },
+            {
+              type: 'TextInput',
+              name: 'name',
+              label: 'Full Name',
+              required: true,
+              'input-type': 'text',
+            },
+            {
+              type: 'TextInput',
+              name: 'mobile',
+              label: 'WhatsApp Number',
+              required: true,
+              'input-type': 'phone',
+              enabled: false,
+              'init-value': '${data.init_phone}',
+            },
+            {
+              type: 'TextInput',
+              name: 'email',
+              label: 'Email (optional)',
+              required: false,
+              'input-type': 'email',
+            },
+            {
+              type: 'DatePicker',
+              name: 'dob',
+              label: 'Date of Birth',
+              required: true,
+            },
+            {
+              type: 'Dropdown',
+              name: 'gender',
+              label: 'Gender',
+              required: true,
+              'data-source': [
+                { id: 'Male', title: 'Male' },
+                { id: 'Female', title: 'Female' },
+                { id: 'Other', title: 'Other' },
+              ],
+            },
+            {
+              type: 'Footer',
+              label: 'Register',
+              'on-click-action': {
+                name: 'data_exchange',
+                payload: {
+                  action: 'save_manual',
+                  name: '${form.name}',
+                  email: '${form.email}',
+                  dob: '${form.dob}',
+                  gender: '${form.gender}',
+                },
+              },
+            },
+          ],
+        },
+      },
+
+      // ─── REG_DONE (terminal) ───
+      {
+        id: 'REG_DONE',
+        title: 'Done',
+        terminal: true,
+        success: true,
+        data: {
+          info_title: { type: 'string', __example__: '🙏 Registered' },
+          info_body: { type: 'string', __example__: 'You are now registered.' },
+        },
+        layout: {
+          type: 'SingleColumnLayout',
+          children: [
+            { type: 'TextHeading', text: '${data.info_title}' },
+            { type: 'TextBody', text: '${data.info_body}' },
+            {
+              type: 'Footer',
+              label: 'Close',
+              'on-click-action': { name: 'complete', payload: {} },
+            },
+          ],
+        },
+      },
+    ],
+  };
+}
+
+module.exports = { buildRegistrationFlowJSON };

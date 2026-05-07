@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Phone, Clock, MessageCircle, ChevronRight } from 'lucide-react';
+import { Search, Phone, Clock, MessageCircle, ChevronRight, ShieldCheck } from 'lucide-react';
 import api from '../api';
 
 export default function Members() {
@@ -28,7 +28,9 @@ export default function Members() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-brand-900">Members</h1>
-          <p className="text-sm text-gray-600">{members.length} contacts who chatted with the bot.</p>
+          <p className="text-sm text-gray-600">
+            {members.length} contacts · {members.filter((m) => m.isRegistered).length} registered
+          </p>
         </div>
         <form
           onSubmit={(e) => {
@@ -59,7 +61,8 @@ export default function Members() {
                 <tr>
                   <th className="px-4 py-3 text-left">Name</th>
                   <th className="px-4 py-3 text-left">WhatsApp</th>
-                  <th className="px-4 py-3 text-left">Last Message</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Age</th>
                   <th className="px-4 py-3 text-left">Requests</th>
                   <th className="px-4 py-3 text-left">Messages</th>
                   <th className="px-4 py-3 text-left">Last Seen</th>
@@ -89,10 +92,26 @@ export default function Members() {
                           <Phone size={14} /> {m.phone}
                         </span>
                       </td>
-                      <td className="px-4 py-3 max-w-xs truncate">
-                        <span className="inline-flex items-center gap-1 text-gray-700">
-                          <MessageCircle size={14} /> {m.lastMessage || '—'}
-                        </span>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {m.isRegistered ? (
+                          <span
+                            className={`pill inline-flex items-center gap-1 ${
+                              m.registrationType === 'epic'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            <ShieldCheck size={12} />{' '}
+                            {m.registrationType === 'epic' ? 'EPIC' : 'Manual'}
+                          </span>
+                        ) : (
+                          <span className="pill bg-gray-100 text-gray-500 inline-flex items-center gap-1">
+                            <MessageCircle size={12} /> Guest
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-700">
+                        {m.age != null ? `${m.age} yrs` : '—'}
                       </td>
                       <td className="px-4 py-3">
                         <span className="pill bg-brand-50 text-brand-700">{m.requestCount || 0}</span>

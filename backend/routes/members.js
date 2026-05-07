@@ -20,7 +20,7 @@ router.get('/', auth, async (req, res) => {
           ],
         }
       : {};
-    const members = await Member.find(filter).sort({ lastSeenAt: -1 }).lean();
+    const members = await Member.find(filter).sort({ lastSeenAt: -1 }).lean({ virtuals: true });
 
     // Compute live request counts (in case the cached count drifts)
     const phones = members.map((m) => m.phone);
@@ -42,10 +42,10 @@ router.get('/:id', auth, async (req, res) => {
   try {
     let member = null;
     if (mongoose.isValidObjectId(req.params.id)) {
-      member = await Member.findById(req.params.id).lean();
+      member = await Member.findById(req.params.id).lean({ virtuals: true });
     }
     if (!member) {
-      member = await Member.findOne({ phone: req.params.id }).lean();
+      member = await Member.findOne({ phone: req.params.id }).lean({ virtuals: true });
     }
     if (!member) return res.status(404).json({ error: 'Member not found' });
 

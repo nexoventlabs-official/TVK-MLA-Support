@@ -12,6 +12,8 @@
     "flow:setup": "node scripts/setup-all.js",
     "flow:update": "node scripts/update-flow.js",
     "flow:publish": "node scripts/publish-flow.js",
+    "reg:create": "node scripts/create-registration-flow.js",
+    "reg:update": "node scripts/update-registration-flow.js",
     "seed:admin": "node scripts/seed-admin.js",
     "templates:sync": "node scripts/sync-templates.js"
   },

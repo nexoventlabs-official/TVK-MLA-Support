@@ -12,6 +12,7 @@ const path = require('path');
 const flowImages = require('../services/flowImages');
 const { urlToBase64 } = require('../services/imageBase64');
 const { SERVICES, getServiceById, getOption } = require('../services/serviceCatalog');
+const { findVoterByEpic } = require('../services/voterDb');
 const Member = require('../models/Member');
 const ServiceRequest = require('../models/ServiceRequest');
 
@@ -134,7 +135,39 @@ function withImage(item, b64) {
 
 function phoneFromToken(token) {
   if (!token) return '';
-  return String(token).replace(/^welcome_/, '').replace(/\D/g, '');
+  return String(token).replace(/^welcome_/, '').replace(/^reg_/, '').replace(/\D/g, '');
+}
+
+function isRegistrationToken(token) {
+  return typeof token === 'string' && token.startsWith('reg_');
+}
+
+function isRegistrationScreen(screen) {
+  return typeof screen === 'string' && screen.startsWith('REG_');
+}
+
+/**
+ * Parse a DOB coming from the Flow DatePicker (epoch ms as string) or a
+ * YYYY-MM-DD string and return a Date or null.
+ */
+function parseDob(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  if (/^\d+$/.test(s)) {
+    const d = new Date(parseInt(s, 10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatDobLabel(d) {
+  if (!d) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
 }
 
 function buildServiceList(images) {
@@ -181,12 +214,15 @@ router.post('/', async (req, res) => {
 
   try {
     let response;
+    const isReg = isRegistrationToken(flow_token) || isRegistrationScreen(screen);
     if (action === 'INIT' || action === 'BACK') {
-      response = await handleInit(flow_token);
+      response = isReg ? await handleRegInit(flow_token) : await handleInit(flow_token);
     } else if (action === 'data_exchange') {
-      response = await handleDataExchange({ screen, data, flow_token });
+      response = isReg
+        ? await handleRegDataExchange({ screen, data, flow_token })
+        : await handleDataExchange({ screen, data, flow_token });
     } else {
-      response = await handleInit(flow_token);
+      response = isReg ? await handleRegInit(flow_token) : await handleInit(flow_token);
     }
     dbg('RESPONSE', { screen: response?.screen, dataKeys: Object.keys(response?.data || {}) });
     return sendResponse(res, response, aesKeyBuffer, ivBuffer);
@@ -326,6 +362,216 @@ async function handleDataExchange({ screen, data, flow_token }) {
     screen: 'INFO',
     data: { info_title: 'Vanakkam 🙏', info_body: 'Type *hi* to open the menu again.' },
   };
+}
+
+/* ───────── Registration flow ───────── */
+
+async function handleRegInit(flow_token) {
+  const images = await loadAllImages();
+  const phone = phoneFromToken(flow_token);
+  return {
+    screen: 'REG_START',
+    data: {
+      welcome_banner: images.flow_welcome_banner || '',
+      has_welcome_banner: !!images.flow_welcome_banner,
+      error_text: '',
+      has_error: false,
+      init_phone: phone,
+    },
+  };
+}
+
+function regStartScreen(images, phone, error = '') {
+  return {
+    screen: 'REG_START',
+    data: {
+      welcome_banner: images.flow_welcome_banner || '',
+      has_welcome_banner: !!images.flow_welcome_banner,
+      error_text: error,
+      has_error: !!error,
+      init_phone: phone,
+    },
+  };
+}
+
+function regManualScreen(images, phone) {
+  return {
+    screen: 'REG_MANUAL',
+    data: {
+      welcome_banner: images.flow_welcome_banner || '',
+      has_welcome_banner: !!images.flow_welcome_banner,
+      init_phone: phone,
+    },
+  };
+}
+
+function regDoneScreen(name) {
+  const greet = name ? ` ${name}` : '';
+  return {
+    screen: 'REG_DONE',
+    data: {
+      info_title: '🙏 Registration Complete',
+      info_body:
+        `Thank you${greet}!\n\n` +
+        'You are now registered with TVK Public Grievance.\n' +
+        'Type *hi* anytime to raise a service request.',
+    },
+  };
+}
+
+async function handleRegDataExchange({ screen, data, flow_token }) {
+  const phone = phoneFromToken(flow_token);
+  const images = await loadAllImages();
+  const action = data?.action;
+
+  // ─── REG_START → REG_CONFIRM (lookup) / REG_MANUAL / REG_START (with error) ───
+  if (screen === 'REG_START') {
+    if (action === 'goto_manual') {
+      return regManualScreen(images, phone);
+    }
+    if (action === 'lookup_epic') {
+      const epic = String(data?.epic_no || '').trim().toUpperCase();
+      const dob = parseDob(data?.dob);
+      if (!epic || !dob) {
+        return regStartScreen(images, phone, 'Please enter both EPIC number and Date of Birth.');
+      }
+      let voter = null;
+      try {
+        voter = await findVoterByEpic(epic);
+      } catch (err) {
+        dbg('REG_LOOKUP_ERROR', err.message);
+        return regStartScreen(
+          images,
+          phone,
+          'Voter database is temporarily unavailable. Please try again or register manually.'
+        );
+      }
+      if (!voter) {
+        return regStartScreen(
+          images,
+          phone,
+          `No voter record found for EPIC "${epic}". Please check the number or register manually.`
+        );
+      }
+      // Stash dob + voter snapshot on the Member record so the next screen
+      // (REG_CONFIRM) can finalize without re-fetching.
+      if (phone) {
+        await Member.findOneAndUpdate(
+          { phone },
+          {
+            $set: {
+              epicNo: voter.epicNo || epic,
+              dob,
+              voterSnapshot: voter,
+            },
+            $setOnInsert: { firstSeenAt: new Date(), phone },
+          },
+          { upsert: true, setDefaultsOnInsert: true }
+        );
+      }
+
+      const relationLabel =
+        voter.relationType && /^h/i.test(voter.relationType)
+          ? 'Husband'
+          : voter.relationType && /^f/i.test(voter.relationType)
+          ? 'Father'
+          : voter.relationType && /^m/i.test(voter.relationType)
+          ? 'Mother'
+          : voter.relationType
+          ? voter.relationType
+          : 'Relation';
+
+      const assemblyLabel =
+        voter.assemblyName && voter.assemblyNo
+          ? `${voter.assemblyName} (${voter.assemblyNo})`
+          : voter.assemblyName || voter.assemblyNo || '—';
+
+      return {
+        screen: 'REG_CONFIRM',
+        data: {
+          voter_name: voter.name || '—',
+          epic_no: voter.epicNo || epic,
+          relation_label: relationLabel,
+          relation_name: voter.relationName || '—',
+          gender: voter.gender || '—',
+          house_no: voter.houseNo || '—',
+          assembly: assemblyLabel,
+          dob_label: formatDobLabel(dob),
+        },
+      };
+    }
+    return regStartScreen(images, phone);
+  }
+
+  // ─── REG_CONFIRM → REG_DONE (save) / REG_START (back) ───
+  if (screen === 'REG_CONFIRM') {
+    if (action === 'back_to_start') {
+      return regStartScreen(images, phone);
+    }
+    if (action === 'save_epic') {
+      if (!phone) {
+        return regStartScreen(images, phone, 'Could not identify your WhatsApp number. Please retry.');
+      }
+      const member = await Member.findOne({ phone });
+      if (!member || !member.voterSnapshot) {
+        return regStartScreen(
+          images,
+          phone,
+          'Session expired. Please re-enter your EPIC number.'
+        );
+      }
+      member.name = member.voterSnapshot.name || member.name || '';
+      member.gender = normalizeGender(member.voterSnapshot.gender) || member.gender || '';
+      member.isRegistered = true;
+      member.registrationType = 'epic';
+      member.registeredAt = new Date();
+      await member.save();
+      return regDoneScreen(member.name || member.profileName || '');
+    }
+    return regStartScreen(images, phone);
+  }
+
+  // ─── REG_MANUAL → REG_DONE (save_manual) ───
+  if (screen === 'REG_MANUAL') {
+    if (action === 'save_manual') {
+      const name = (data?.name || '').trim();
+      const email = (data?.email || '').trim();
+      const dob = parseDob(data?.dob);
+      const gender = normalizeGender(data?.gender);
+      if (!phone || !name || !dob) {
+        return regManualScreen(images, phone);
+      }
+      await Member.findOneAndUpdate(
+        { phone },
+        {
+          $set: {
+            name,
+            email,
+            dob,
+            gender,
+            isRegistered: true,
+            registrationType: 'manual',
+            registeredAt: new Date(),
+          },
+          $setOnInsert: { firstSeenAt: new Date(), phone },
+        },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+      return regDoneScreen(name);
+    }
+    return regManualScreen(images, phone);
+  }
+
+  return regStartScreen(images, phone);
+}
+
+function normalizeGender(g) {
+  if (!g) return '';
+  const s = String(g).trim().toLowerCase();
+  if (s.startsWith('m')) return 'Male';
+  if (s.startsWith('f')) return 'Female';
+  if (!s) return '';
+  return 'Other';
 }
 
 module.exports = router;

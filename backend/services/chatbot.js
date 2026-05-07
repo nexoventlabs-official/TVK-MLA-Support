@@ -34,7 +34,8 @@ async function trackInbound({ phone, profileName, text }) {
 }
 
 /**
- * Send the welcome flow message: image header + body + footer + CTA "Choose Service".
+ * Send the grievance flow message: image header + body + footer + CTA "Choose Service".
+ * Used for users who have already completed registration.
  */
 async function sendWelcomeFlow(phone) {
   const flowId = process.env.WHATSAPP_FLOW_ID;
@@ -65,14 +66,57 @@ async function sendWelcomeFlow(phone) {
   });
 }
 
+/**
+ * Send the voter-registration flow message — first-time greeting for any
+ * contact whose Member record has `isRegistered=false`. Reuses the same
+ * banner image as the grievance flow.
+ */
+async function sendRegistrationFlow(phone) {
+  const flowId = process.env.WHATSAPP_REG_FLOW_ID;
+  if (!flowId) {
+    // Registration flow not configured yet — fall back to grievance flow so
+    // the bot keeps working until admin runs the create script.
+    return sendWelcomeFlow(phone);
+  }
+
+  const banner = await flowImages.getUrl('chat_welcome_header');
+  const mode =
+    String(process.env.WHATSAPP_REG_FLOW_STATUS || '').toUpperCase() === 'PUBLISHED'
+      ? 'published'
+      : 'draft';
+
+  await meta.sendFlowMessage(phone, {
+    flowId,
+    flowCta: 'Register Now',
+    headerImageUrl: banner || undefined,
+    headerText: !banner ? 'TVK Public Grievance' : undefined,
+    bodyText:
+      'Vanakkam 🙏\n\nWelcome to *TVK Public Grievance Service*. Please register once with your *EPIC (Voter ID)* number to access our services. Tap *Register Now* below.',
+    footerText: 'TVK – Tamilaga Vettri Kazhagam',
+    flowToken: `reg_${phone}`,
+    mode,
+  });
+}
+
 async function handleInbound({ phone, profileName, type, text }) {
   await trackInbound({ phone, profileName, text });
 
   if (isGreeting(text) || !text) {
+    let registered = false;
     try {
-      await sendWelcomeFlow(phone);
+      const m = await Member.findOne({ phone }).lean();
+      registered = !!m?.isRegistered;
     } catch (err) {
-      console.error('[chatbot] sendWelcomeFlow failed:', err.response?.data || err.message);
+      console.warn('[chatbot] member lookup failed:', err.message);
+    }
+    try {
+      if (registered) {
+        await sendWelcomeFlow(phone);
+      } else {
+        await sendRegistrationFlow(phone);
+      }
+    } catch (err) {
+      console.error('[chatbot] sendFlow failed:', err.response?.data || err.message);
       await meta
         .sendText(phone, 'Welcome to TVK 🇮🇳 — please type *hi* to see our services.')
         .catch(() => {});
@@ -85,4 +129,10 @@ async function handleInbound({ phone, profileName, type, text }) {
     .catch(() => {});
 }
 
-module.exports = { handleInbound, sendWelcomeFlow, isGreeting, trackInbound };
+module.exports = {
+  handleInbound,
+  sendWelcomeFlow,
+  sendRegistrationFlow,
+  isGreeting,
+  trackInbound,
+};

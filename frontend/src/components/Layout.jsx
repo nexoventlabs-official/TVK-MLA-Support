@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   Users,
+  ShieldCheck,
   Megaphone,
   Image as ImageIcon,
   LogOut,
@@ -14,6 +15,7 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/service-requests', label: 'Service Requests', icon: ClipboardList },
   { to: '/members', label: 'Members', icon: Users },
+  { to: '/voters', label: 'Voters', icon: ShieldCheck },
   { to: '/campaigns', label: 'Campaigns', icon: Megaphone },
   { to: '/flow-images', label: 'Flow Images', icon: ImageIcon },
 ];

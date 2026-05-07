@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Phone, MessageCircle, Calendar, MapPin } from 'lucide-react';
+import { ArrowLeft, Phone, MessageCircle, Calendar, MapPin, ShieldCheck, IdCard } from 'lucide-react';
 import api from '../api';
 
 const STATUS_COLORS = {
@@ -40,15 +40,42 @@ export default function MemberDetail() {
             {display[0]?.toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-brand-900">{display}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-brand-900">{display}</h1>
+              {m.isRegistered ? (
+                <Link
+                  to={`/voters/${m._id}`}
+                  className={`pill inline-flex items-center gap-1 ${
+                    m.registrationType === 'epic'
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                      : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                  }`}
+                >
+                  <ShieldCheck size={12} />
+                  {m.registrationType === 'epic' ? 'EPIC Verified' : 'Manual'}
+                </Link>
+              ) : (
+                <span className="pill bg-gray-100 text-gray-500">Not registered</span>
+              )}
+            </div>
             <div className="text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1 mt-1">
               <span className="inline-flex items-center gap-1"><Phone size={14} /> {m.phone}</span>
               {m.profileName && <span className="text-gray-400">WhatsApp profile: {m.profileName}</span>}
               {m.email && <span>{m.email}</span>}
+              {m.epicNo && (
+                <span className="inline-flex items-center gap-1 font-mono text-xs">
+                  <IdCard size={14} /> {m.epicNo}
+                </span>
+              )}
+              {m.age != null && <span>Age: <strong>{m.age}</strong></span>}
+              {m.gender && <span>{m.gender}</span>}
             </div>
             <div className="text-xs text-gray-500 mt-2 flex flex-wrap gap-x-4">
               <span>First seen: {new Date(m.firstSeenAt).toLocaleString()}</span>
               <span>Last seen: {new Date(m.lastSeenAt).toLocaleString()}</span>
+              {m.registeredAt && (
+                <span>Registered: {new Date(m.registeredAt).toLocaleString()}</span>
+              )}
               <span>Messages: <strong>{m.messageCount || 0}</strong></span>
               <span>Requests: <strong>{m.requestCount || data.requests.length}</strong></span>
             </div>

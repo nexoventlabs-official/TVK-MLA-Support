@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard.jsx';
 import ServiceRequests from './pages/ServiceRequests.jsx';
 import Members from './pages/Members.jsx';
 import MemberDetail from './pages/MemberDetail.jsx';
+import Voters from './pages/Voters.jsx';
+import VoterDetail from './pages/VoterDetail.jsx';
 import Campaigns from './pages/Campaigns.jsx';
 import FlowImages from './pages/FlowImages.jsx';
 
@@ -50,6 +52,8 @@ function App() {
           <Route path="service-requests" element={<ServiceRequests />} />
           <Route path="members" element={<Members />} />
           <Route path="members/:id" element={<MemberDetail />} />
+          <Route path="voters" element={<Voters />} />
+          <Route path="voters/:id" element={<VoterDetail />} />
           <Route path="campaigns" element={<Campaigns />} />
           <Route path="flow-images" element={<FlowImages />} />
         </Route>
