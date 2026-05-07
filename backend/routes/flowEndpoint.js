@@ -107,13 +107,15 @@ async function loadAllImages() {
       const url = map[k];
       if (!url) return [k, ''];
       const isIcon = k.startsWith('icon_');
-      // Banners (welcome banner + per-service banners) are the visual hero —
-      // serve them at 2x retina (2000×250) at near-lossless q92 (≈200 KB JPG).
-      // Icons stay small because up to 9 of them ship in the same response;
-      // keeping them at 160×160 q70 (≈4-5 KB each) leaves room for the banner.
+      // Budget per Flow response (Meta encrypted payload limit ≈ 250 KB):
+      //   • Banner: 1600×200 q82 JPG → ~100 KB
+      //   • Icons:  200×200  q80 JPG → ~8 KB each
+      // With this budget a SERVICE_SELECT screen with 15+ services still
+      // fits comfortably (100 + 15×8 ≈ 220 KB), leaving room for new
+      // services to be added without hitting the cap.
       const opts = isIcon
-        ? { width: 160, height: 160, crop: 'fill', quality: 70, format: 'jpg' }
-        : { width: 2000, height: 250, crop: 'fill', quality: 92, format: 'jpg' };
+        ? { width: 200, height: 200, crop: 'fill', quality: 80, format: 'jpg' }
+        : { width: 1600, height: 200, crop: 'fill', quality: 82, format: 'jpg' };
       const b64 = await urlToBase64(url, opts);
       return [k, b64];
     })
