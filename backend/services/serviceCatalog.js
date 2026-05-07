@@ -111,6 +111,7 @@ const SERVICES = [
     iconKey: 'icon_employment',
     bannerKey: 'banner_employment',
     options: [
+      { id: 'job',             title: 'Job',             description: 'Job opportunities / placement', iconKey: 'icon_emp_job' },
       { id: 'skill_training',  title: 'Skill Training',  description: 'Training programs',  iconKey: 'icon_emp_skill' },
       { id: 'self_employment', title: 'Self Employment', description: 'Self-employment scheme', iconKey: 'icon_emp_self' },
       { id: 'epf_issue',       title: 'EPF Issue',       description: 'Provident fund issue', iconKey: 'icon_emp_epf' },
