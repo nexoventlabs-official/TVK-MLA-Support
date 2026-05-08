@@ -394,13 +394,18 @@ function regStartScreen(images, phone, error = '') {
   };
 }
 
-function regManualScreen(images, phone) {
+function regManualScreen(images, phone, opts = {}) {
+  const { error = '', name = '', email = '' } = opts;
   return {
     screen: 'REG_MANUAL',
     data: {
       welcome_banner: images.flow_welcome_banner || '',
       has_welcome_banner: !!images.flow_welcome_banner,
       init_phone: phone,
+      init_name: name,
+      init_email: email,
+      error_text: error,
+      has_error: !!error,
     },
   };
 }
@@ -538,25 +543,62 @@ async function handleRegDataExchange({ screen, data, flow_token }) {
       const email = (data?.email || '').trim();
       const dob = parseDob(data?.dob);
       const gender = normalizeGender(data?.gender);
-      if (!phone || !name || !dob) {
-        return regManualScreen(images, phone);
+      dbg('REG_SAVE_MANUAL', {
+        phone,
+        name,
+        email,
+        rawDob: data?.dob,
+        parsedDob: dob,
+        gender,
+      });
+
+      if (!phone) {
+        return regManualScreen(images, phone, {
+          error: 'Could not identify your WhatsApp number. Please retry.',
+          name,
+          email,
+        });
       }
-      await Member.findOneAndUpdate(
-        { phone },
-        {
-          $set: {
-            name,
-            email,
-            dob,
-            gender,
-            isRegistered: true,
-            registrationType: 'manual',
-            registeredAt: new Date(),
+      if (!name) {
+        return regManualScreen(images, phone, {
+          error: 'Please enter your full name.',
+          name,
+          email,
+        });
+      }
+      if (!dob) {
+        return regManualScreen(images, phone, {
+          error: 'Please pick a valid Date of Birth.',
+          name,
+          email,
+        });
+      }
+
+      try {
+        await Member.findOneAndUpdate(
+          { phone },
+          {
+            $set: {
+              name,
+              email,
+              dob,
+              gender,
+              isRegistered: true,
+              registrationType: 'manual',
+              registeredAt: new Date(),
+            },
+            $setOnInsert: { firstSeenAt: new Date(), phone },
           },
-          $setOnInsert: { firstSeenAt: new Date(), phone },
-        },
-        { upsert: true, setDefaultsOnInsert: true }
-      );
+          { upsert: true, setDefaultsOnInsert: true }
+        );
+      } catch (err) {
+        dbg('REG_SAVE_MANUAL_ERROR', { message: err.message });
+        return regManualScreen(images, phone, {
+          error: 'Could not save your details. Please try again.',
+          name,
+          email,
+        });
+      }
       return regDoneScreen(name);
     }
     return regManualScreen(images, phone);
