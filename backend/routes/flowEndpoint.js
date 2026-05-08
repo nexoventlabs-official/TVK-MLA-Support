@@ -472,14 +472,15 @@ function regDoneScreen(name) {
 async function handleRegDataExchange({ screen, data, flow_token }) {
   const phone = phoneFromToken(flow_token);
   const images = await safeLoadImages();
-  const action = data?.action;
 
-  // ─── REG_START → REG_CONFIRM (lookup) / REG_MANUAL / REG_START (with error) ───
+  // NOTE: WhatsApp Flow strips static keys from data_exchange payloads -
+  // only ${form.X} form values reach the server. So we dispatch purely on
+  // `screen`, which is always present and unambiguous because every
+  // registration screen has exactly one data_exchange action.
+
+  // ─── REG_START → REG_CONFIRM (lookup) / REG_START (with error) ───
   if (screen === 'REG_START') {
-    if (action === 'goto_manual') {
-      return regManualScreen(images, phone);
-    }
-    if (action === 'lookup_epic') {
+    {
       const epic = String(data?.epic_no || '').trim().toUpperCase();
       const dob = parseDob(data?.dob);
       dbg('REG_LOOKUP_EPIC', { phone, epic, rawDob: data?.dob, parsedDob: dob });
@@ -559,40 +560,38 @@ async function handleRegDataExchange({ screen, data, flow_token }) {
         },
       };
     }
-    return regStartScreen(images, phone);
   }
 
-  // ─── REG_CONFIRM → REG_DONE (save) / REG_START (back) ───
+  // ─── REG_CONFIRM → REG_DONE (Confirm & Register footer) ───
+  // The 'back' link is a navigate action and never reaches the server.
   if (screen === 'REG_CONFIRM') {
-    if (action === 'back_to_start') {
-      return regStartScreen(images, phone);
+    if (!phone) {
+      return regStartScreen(
+        images,
+        phone,
+        'Could not identify your WhatsApp number. Please retry.'
+      );
     }
-    if (action === 'save_epic') {
-      if (!phone) {
-        return regStartScreen(images, phone, 'Could not identify your WhatsApp number. Please retry.');
-      }
-      const member = await Member.findOne({ phone });
-      if (!member || !member.voterSnapshot) {
-        return regStartScreen(
-          images,
-          phone,
-          'Session expired. Please re-enter your EPIC number.'
-        );
-      }
-      member.name = member.voterSnapshot.name || member.name || '';
-      member.gender = normalizeGender(member.voterSnapshot.gender) || member.gender || '';
-      member.isRegistered = true;
-      member.registrationType = 'epic';
-      member.registeredAt = new Date();
-      await member.save();
-      return regDoneScreen(member.name || member.profileName || '');
+    const member = await Member.findOne({ phone });
+    if (!member || !member.voterSnapshot) {
+      return regStartScreen(
+        images,
+        phone,
+        'Session expired. Please re-enter your EPIC number.'
+      );
     }
-    return regStartScreen(images, phone);
+    member.name = member.voterSnapshot.name || member.name || '';
+    member.gender = normalizeGender(member.voterSnapshot.gender) || member.gender || '';
+    member.isRegistered = true;
+    member.registrationType = 'epic';
+    member.registeredAt = new Date();
+    await member.save();
+    return regDoneScreen(member.name || member.profileName || '');
   }
 
-  // ─── REG_MANUAL → REG_DONE (save_manual) ───
+  // ─── REG_MANUAL → REG_DONE (Register footer) ───
   if (screen === 'REG_MANUAL') {
-    if (action === 'save_manual') {
+    {
       const name = (data?.name || '').trim();
       const email = (data?.email || '').trim();
       const dob = parseDob(data?.dob);
@@ -662,7 +661,6 @@ async function handleRegDataExchange({ screen, data, flow_token }) {
       }
       return regDoneScreen(name);
     }
-    return regManualScreen(images, phone);
   }
 
   return regStartScreen(images, phone);
