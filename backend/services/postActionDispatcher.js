@@ -60,28 +60,56 @@ function decodePostData(b64) {
 
 async function sendContactMla(phone) {
   const banner = await flowImages.getUrl('header_contact_mla');
-
-  // 1) Branding image + office info body so the user has full context.
-  const intro =
-    `*${CONTACT_MLA.name}*\n\n` +
-    `📞 ${CONTACT_MLA.phone}\n` +
-    `📧 ${CONTACT_MLA.email}\n` +
-    `🏢 ${CONTACT_MLA.address}\n\n` +
-    `Tap the contact card below — then tap *Call* to reach our office directly.`;
-  if (banner) {
-    await meta.sendImage(phone, banner, intro).catch(() => {});
-  } else {
-    await meta.sendText(phone, intro).catch(() => {});
-  }
-
-  // 2) WhatsApp vCard. Tapping the card opens Save/Call options; tapping
-  //    the phone row opens the dialer — this is our effective Call CTA
-  //    (WhatsApp's standard interactive messages do not expose a `tel:`
-  //    button outside approved templates).
   const phoneDigits = String(CONTACT_MLA.phone).replace(/\D/g, '');
   const formattedPhone = phoneDigits.startsWith('+')
     ? CONTACT_MLA.phone
     : `+${phoneDigits}`;
+
+  // 1) Interactive CTA URL message — banner image header, office info body,
+  //    and a green "Call Office" button. WhatsApp's CTA URL action only
+  //    accepts http/https URLs, so we use `https://wa.me/<digits>` which
+  //    opens a chat with the office number; on most clients the chat header
+  //    exposes a one-tap call button. The vCard sent below provides the
+  //    native dialer fallback.
+  const callUrl = phoneDigits ? `https://wa.me/${phoneDigits}` : null;
+  const ctaBody =
+    `*${CONTACT_MLA.name}*\n\n` +
+    `📞 ${CONTACT_MLA.phone}\n` +
+    `📧 ${CONTACT_MLA.email}\n` +
+    `🏢 ${CONTACT_MLA.address}\n\n` +
+    `Tap *Call Office* below to reach us directly.`;
+  let ctaSent = false;
+  if (callUrl) {
+    try {
+      await meta.sendCtaUrl(phone, {
+        headerImageUrl: banner || undefined,
+        headerText: !banner ? CONTACT_MLA.name : undefined,
+        body: ctaBody,
+        footer: 'TVK MLA Office',
+        ctaLabel: 'Call Office',
+        ctaUrl: callUrl,
+      });
+      ctaSent = true;
+    } catch (err) {
+      console.warn(
+        '[postActionDispatcher] sendCtaUrl(MLA) failed:',
+        err.response?.data || err.message
+      );
+    }
+  }
+  if (!ctaSent) {
+    // Fallback: image + text body if the CTA URL message failed.
+    if (banner) {
+      await meta.sendImage(phone, banner, ctaBody).catch(() => {});
+    } else {
+      await meta.sendText(phone, ctaBody).catch(() => {});
+    }
+  }
+
+  // 2) WhatsApp vCard. Tapping the card opens Save/Call options; tapping
+  //    the phone row opens the dialer — this is our native dialer CTA
+  //    (WhatsApp's interactive messages do not expose a `tel:` button
+  //    outside approved templates).
   const contact = {
     name: {
       formatted_name: CONTACT_MLA.name,
