@@ -228,7 +228,7 @@ function buildRegistrationFlowJSON() {
               type: 'Dropdown',
               name: 'gender',
               label: 'Gender',
-              required: false,
+              required: true,
               'data-source': [
                 { id: 'Male', title: 'Male' },
                 { id: 'Female', title: 'Female' },

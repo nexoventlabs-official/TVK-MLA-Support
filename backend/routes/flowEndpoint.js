@@ -627,6 +627,13 @@ async function handleRegDataExchange({ screen, data, flow_token }) {
           email,
         });
       }
+      if (!gender) {
+        return regManualScreen(images, phone, {
+          error: 'Please select your Gender.',
+          name,
+          email,
+        });
+      }
 
       try {
         await Member.findOneAndUpdate(
