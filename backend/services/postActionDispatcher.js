@@ -231,16 +231,30 @@ async function startLocationFlow(phone, { kind, serviceId, optionId, serviceTitl
   const banner = await flowImages.getUrl(action.headerKey);
   const body =
     `📍 *Share your location*\n\n` +
+    `To raise a *${optionTitle}* ticket, please share your *current location*.\n\n` +
+    'Tap the *Send Location* button below 🙏';
+  const fallbackBody =
+    `📍 *Share your location*\n\n` +
     `To raise a *${optionTitle}* ticket, please share your *current location*:\n\n` +
     '1️⃣ Tap the 📎 attachment icon below\n' +
     '2️⃣ Select *Location*\n' +
     '3️⃣ Send your *current location*\n\n' +
     'We are waiting for your location 🙏';
 
+  // Send the banner as a separate image first (location_request_message
+  // does NOT support a header image), then the native location request.
   if (banner) {
-    await meta.sendImage(phone, banner, body).catch(() => {});
-  } else {
-    await meta.sendText(phone, body).catch(() => {});
+    await meta.sendImage(phone, banner, '').catch(() => {});
+  }
+
+  try {
+    await meta.sendLocationRequest(phone, body);
+  } catch (err) {
+    console.warn(
+      '[postActionDispatcher] sendLocationRequest failed, falling back to text:',
+      err.response?.data || err.message
+    );
+    await meta.sendText(phone, fallbackBody).catch(() => {});
   }
 }
 

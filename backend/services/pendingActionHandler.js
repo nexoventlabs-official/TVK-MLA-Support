@@ -56,8 +56,15 @@ async function handleLocationMessage({ phone, locationData }) {
   const lng = Number(locationData?.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     await meta
-      .sendText(phone, '❌ Invalid location. Please share your *current location* again.')
-      .catch(() => {});
+      .sendLocationRequest(
+        phone,
+        '❌ That location was invalid. Please tap *Send Location* below and share your *current location* again.'
+      )
+      .catch(async () => {
+        await meta
+          .sendText(phone, '❌ Invalid location. Please share your *current location* again.')
+          .catch(() => {});
+      });
     return true;
   }
 
@@ -167,12 +174,20 @@ async function handleTextDuringPending({ phone, text }) {
 
   if (pa.step === 'awaiting_location') {
     await meta
-      .sendText(
+      .sendLocationRequest(
         phone,
-        '📍 We are still waiting for your *location*. Tap 📎 → *Location* → *Send your current location*.\n\n' +
-          'Or reply *cancel* to abort.'
+        '📍 We are still waiting for your *location*. Tap *Send Location* below to share your current location.\n\n' +
+          'Reply *cancel* to abort.'
       )
-      .catch(() => {});
+      .catch(async () => {
+        await meta
+          .sendText(
+            phone,
+            '📍 We are still waiting for your *location*. Tap 📎 → *Location* → *Send your current location*.\n\n' +
+              'Or reply *cancel* to abort.'
+          )
+          .catch(() => {});
+      });
     return true;
   }
 

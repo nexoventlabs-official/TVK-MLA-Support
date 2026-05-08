@@ -117,6 +117,36 @@ async function sendCtaUrl(to, { headerImageUrl, headerText, body, footer, ctaLab
 }
 
 /**
+ * Send an interactive *location_request_message* — renders a single
+ * native "Send Location" button in WhatsApp that opens the location
+ * picker directly. Far better UX than asking the user to tap the
+ * paperclip icon.
+ *
+ * Note: Meta's location_request_message does NOT support a header image,
+ * so callers should send the banner as a separate sendImage call first
+ * if they want one.
+ */
+async function sendLocationRequest(to, body) {
+  const { baseUrl, accessToken } = cfg();
+  const phone = String(to).replace(/\D/g, '');
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: phone,
+    type: 'interactive',
+    interactive: {
+      type: 'location_request_message',
+      body: { text: String(body || '').slice(0, 1024) },
+      action: { name: 'send_location' },
+    },
+  };
+  const { data } = await api.post(`${baseUrl}/messages`, payload, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return data;
+}
+
+/**
  * Download a media object the user uploaded (image / location-shared image /
  * etc.) from Meta. Returns a Buffer + mimeType. Two-step: first GET the
  * media metadata to obtain the temporary URL, then GET that URL with the
@@ -375,6 +405,7 @@ module.exports = {
   sendImage,
   sendDocument,
   sendCtaUrl,
+  sendLocationRequest,
   downloadMedia,
   sendFlowMessage,
   sendTemplate,
