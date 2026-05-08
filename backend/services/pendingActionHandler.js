@@ -138,18 +138,17 @@ async function handleImageMessage({ phone, mediaId }) {
 
   const have = pa.mediaUrls.length;
   if (have >= REQUIRED_PHOTOS) {
-    // Auto-finalise once we have the exact number of required photos.
+    // All required photos received. Send a single "please wait" so the user
+    // knows we are processing, then finalise the ticket (which sends the
+    // ticket confirmation + the welcome flow re-launch).
+    await meta
+      .sendText(phone, '⏳ All 3 photos received. Please wait while we generate your ticket…')
+      .catch(() => {});
     await finaliseTicket(member);
     return true;
   }
-  const remaining = REQUIRED_PHOTOS - have;
-  await meta
-    .sendText(
-      phone,
-      `✅ Photo ${have} of ${REQUIRED_PHOTOS} received.\n\n` +
-        `Please send *${remaining} more photo${remaining === 1 ? '' : 's'}* to submit your ticket.`
-    )
-    .catch(() => {});
+  // Photos 1 and 2: stay silent. The user can see WhatsApp's own ✓✓ delivery
+  // ticks; we don't need to ack each upload.
   return true;
 }
 
