@@ -366,9 +366,20 @@ async function handleDataExchange({ screen, data, flow_token }) {
 
 /* ───────── Registration flow ───────── */
 
+async function memberDisplayName(phone) {
+  if (!phone) return '';
+  try {
+    const m = await Member.findOne({ phone }).lean();
+    return (m?.name || m?.profileName || '').trim();
+  } catch {
+    return '';
+  }
+}
+
 async function handleRegInit(flow_token) {
   const images = await loadAllImages();
   const phone = phoneFromToken(flow_token);
+  const initName = await memberDisplayName(phone);
   return {
     screen: 'REG_START',
     data: {
@@ -377,11 +388,13 @@ async function handleRegInit(flow_token) {
       error_text: '',
       has_error: false,
       init_phone: phone,
+      init_name: initName,
     },
   };
 }
 
-function regStartScreen(images, phone, error = '') {
+async function regStartScreen(images, phone, error = '') {
+  const initName = await memberDisplayName(phone);
   return {
     screen: 'REG_START',
     data: {
@@ -390,19 +403,24 @@ function regStartScreen(images, phone, error = '') {
       error_text: error,
       has_error: !!error,
       init_phone: phone,
+      init_name: initName,
     },
   };
 }
 
-function regManualScreen(images, phone, opts = {}) {
+async function regManualScreen(images, phone, opts = {}) {
   const { error = '', name = '', email = '' } = opts;
+  // Fall back to WhatsApp profile name when caller didn't pass one (e.g. on
+  // back navigation from REG_START to REG_MANUAL when the user clicks the
+  // 'Register Manually' link.)
+  const initName = name || (await memberDisplayName(phone));
   return {
     screen: 'REG_MANUAL',
     data: {
       welcome_banner: images.flow_welcome_banner || '',
       has_welcome_banner: !!images.flow_welcome_banner,
       init_phone: phone,
-      init_name: name,
+      init_name: initName,
       init_email: email,
       error_text: error,
       has_error: !!error,
@@ -437,14 +455,20 @@ async function handleRegDataExchange({ screen, data, flow_token }) {
     if (action === 'lookup_epic') {
       const epic = String(data?.epic_no || '').trim().toUpperCase();
       const dob = parseDob(data?.dob);
+      dbg('REG_LOOKUP_EPIC', { phone, epic, rawDob: data?.dob, parsedDob: dob });
       if (!epic || !dob) {
-        return regStartScreen(images, phone, 'Please enter both EPIC number and Date of Birth.');
+        return regStartScreen(
+          images,
+          phone,
+          'Please enter both EPIC number and Date of Birth.'
+        );
       }
       let voter = null;
       try {
         voter = await findVoterByEpic(epic);
+        dbg('REG_LOOKUP_RESULT', { epic, found: !!voter, voterName: voter?.name });
       } catch (err) {
-        dbg('REG_LOOKUP_ERROR', err.message);
+        dbg('REG_LOOKUP_ERROR', { message: err.message, stack: err.stack });
         return regStartScreen(
           images,
           phone,
