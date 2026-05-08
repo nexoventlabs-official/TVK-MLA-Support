@@ -74,8 +74,25 @@ router.post('/meta', async (req, res) => {
           if (msg.type === 'text') text = msg.text?.body || '';
           else if (msg.type === 'interactive') {
             // Flow `complete` callbacks arrive as interactive.nfm_reply.
-            // Currently the TVK flow's terminal screen has no follow-up payload, so we just skip.
-            if (msg.interactive?.type === 'nfm_reply') continue;
+            // We forward them to handleFlowComplete so the bot can send the
+            // grievance "Choose Service" welcome flow automatically right
+            // after the user finishes the registration flow.
+            if (msg.interactive?.type === 'nfm_reply') {
+              const respJson = msg.interactive?.nfm_reply?.response_json || '';
+              let flowToken = '';
+              try {
+                const parsed = respJson ? JSON.parse(respJson) : {};
+                flowToken = parsed.flow_token || '';
+              } catch (e) {
+                console.warn('[webhook] nfm_reply parse failed:', e.message);
+              }
+              await chatbot
+                .handleFlowComplete({ phone: from, flowToken })
+                .catch((e) =>
+                  console.error('[webhook] handleFlowComplete failed:', e.message)
+                );
+              continue;
+            }
             text = msg.interactive?.button_reply?.title ||
               msg.interactive?.list_reply?.title || '';
           } else if (msg.type === 'button') {

@@ -98,6 +98,41 @@ async function sendRegistrationFlow(phone) {
   });
 }
 
+/**
+ * Called when a Flow's terminal screen fires its `complete` action and Meta
+ * delivers the resulting `nfm_reply` to the webhook. We use it to send the
+ * grievance ("Choose Service") welcome flow automatically right after a user
+ * finishes the registration flow, so they don't have to type "hi" again.
+ *
+ * `flowToken` is the same token the bot set when launching the flow, e.g.
+ * `reg_<phone>` for the registration flow.
+ */
+async function handleFlowComplete({ phone, flowToken }) {
+  if (!phone) return;
+  await trackInbound({ phone, profileName: '', text: '[flow_complete]' });
+  if (typeof flowToken !== 'string' || !flowToken.startsWith('reg_')) return;
+
+  // Verify the user actually registered (vs. just closing the flow part-way)
+  // before sending the grievance welcome.
+  let registered = false;
+  try {
+    const m = await Member.findOne({ phone }).lean();
+    registered = !!m?.isRegistered;
+  } catch (err) {
+    console.warn('[chatbot] handleFlowComplete lookup failed:', err.message);
+  }
+  if (!registered) return;
+
+  try {
+    await sendWelcomeFlow(phone);
+  } catch (err) {
+    console.error(
+      '[chatbot] post-registration welcome failed:',
+      err.response?.data || err.message
+    );
+  }
+}
+
 async function handleInbound({ phone, profileName, type, text }) {
   await trackInbound({ phone, profileName, text });
 
@@ -131,6 +166,7 @@ async function handleInbound({ phone, profileName, type, text }) {
 
 module.exports = {
   handleInbound,
+  handleFlowComplete,
   sendWelcomeFlow,
   sendRegistrationFlow,
   isGreeting,
