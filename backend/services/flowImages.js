@@ -21,14 +21,23 @@ const IMAGE_KEYS = [
   ...ACTION_IMAGE_SPECS,
 ];
 
+/**
+ * Seed every catalog key in a single Mongo round-trip. Previously this looped
+ * with `await updateOne(...)` per key (N round-trips ≈ multi-second hang on
+ * cold connections). `bulkWrite` collapses all upserts into one batched op.
+ */
 async function ensureKeysExist() {
-  for (const item of IMAGE_KEYS) {
-    await FlowImage.updateOne(
-      { key: item.key },
-      { $setOnInsert: { key: item.key, label: item.label, url: '', publicId: '' } },
-      { upsert: true }
-    );
-  }
+  if (!IMAGE_KEYS.length) return;
+  const ops = IMAGE_KEYS.map((item) => ({
+    updateOne: {
+      filter: { key: item.key },
+      update: {
+        $setOnInsert: { key: item.key, label: item.label, url: '', publicId: '' },
+      },
+      upsert: true,
+    },
+  }));
+  await FlowImage.bulkWrite(ops, { ordered: false });
 }
 
 async function getUrl(key) {

@@ -30,6 +30,18 @@ function prettyOptionLabel(group) {
   return `Options — ${id.replace(/_/g, ' ')}`;
 }
 
+/**
+ * Insert a Cloudinary delivery transform so the admin grid pulls a small
+ * thumbnail (≤320px wide, auto format/quality) instead of the full-resolution
+ * banner. Reduces page weight from MBs to a few hundred KB and is the main
+ * driver of the perceived "long loading" on Flow Images.
+ */
+function thumb(url) {
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url;
+  return url.replace('/upload/', '/upload/c_fill,w_320,h_320,q_auto,f_auto/');
+}
+
 export default function FlowImages() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,7 +133,13 @@ export default function FlowImages() {
                       <FileText size={42} className="text-gray-300" />
                     )
                   ) : item.url ? (
-                    <img src={item.url} alt={item.label} className="w-full h-full object-cover" />
+                    <img
+                      src={thumb(item.url)}
+                      alt={item.label}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <ImageIcon size={36} className="text-gray-300" />
                   )}

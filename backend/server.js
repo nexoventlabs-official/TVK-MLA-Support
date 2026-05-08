@@ -117,6 +117,17 @@ async function start() {
     console.warn('[Seed] admin seed skipped:', err.message);
   }
 
+  // Seed FlowImage key catalog once at startup (single bulkWrite). This used
+  // to run on every GET /flow-images request and was the cause of the slow
+  // admin "Flow Images" page load.
+  try {
+    const { ensureKeysExist } = require('./services/flowImages');
+    await ensureKeysExist();
+    console.log('[Seed] FlowImage key catalog ensured');
+  } catch (err) {
+    console.warn('[Seed] flow image catalog skipped:', err.message);
+  }
+
   app.listen(PORT, () => {
     console.log(`[Server] http://localhost:${PORT}`);
   });

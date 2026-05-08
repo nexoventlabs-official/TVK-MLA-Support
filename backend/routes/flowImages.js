@@ -2,7 +2,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const FlowImage = require('../models/FlowImage');
-const { IMAGE_KEYS, ensureKeysExist } = require('../services/flowImages');
+const { IMAGE_KEYS } = require('../services/flowImages');
 const { uploadBuffer, uploadAutoBuffer, destroy } = require('../services/cloudinary');
 
 function bustFlowCache() {
@@ -24,8 +24,14 @@ function isPdfKey(key) {
 
 /** List all flow image slots. */
 router.get('/', auth, async (_req, res) => {
-  await ensureKeysExist();
-  const docs = await FlowImage.find({}).lean();
+  // The response is built from the static IMAGE_KEYS spec merged with any
+  // existing docs — keys that don't yet exist in Mongo simply come back
+  // with an empty url. Seeding happens once at server startup, so the GET
+  // is now a single projected find() instead of N upserts.
+  const docs = await FlowImage.find(
+    {},
+    { key: 1, url: 1, publicId: 1, resourceType: 1, updatedAt: 1 }
+  ).lean();
   const map = new Map(docs.map((d) => [d.key, d]));
   const items = IMAGE_KEYS.map((spec) => {
     const doc = map.get(spec.key) || {};
@@ -39,6 +45,10 @@ router.get('/', auth, async (_req, res) => {
       updatedAt: doc.updatedAt || null,
     };
   });
+  // Tell the browser it's safe to reuse the response for a few seconds
+  // (the admin re-fetches on every upload/delete anyway, so we won't
+  // serve stale data after an actual change).
+  res.set('Cache-Control', 'private, max-age=10');
   res.json({ images: items });
 });
 
