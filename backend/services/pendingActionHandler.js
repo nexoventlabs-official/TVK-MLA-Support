@@ -21,7 +21,9 @@ const { getAction } = require('./issueActions');
 const { generateTicketId } = require('./ticketing');
 const { sendWelcomeFlowSafe } = require('./postActionDispatcher');
 
-const MAX_PHOTOS = 3;
+// Exactly 3 photos are required to finalise a location_photos_ticket.
+// Anything less is rejected; anything more is ignored.
+const REQUIRED_PHOTOS = 3;
 
 /* ───────────────── public entry points ───────────────── */
 
@@ -90,8 +92,8 @@ async function handleLocationMessage({ phone, locationData }) {
   await meta
     .sendText(
       phone,
-      `✅ Location received.\n\n📸 Now please send *1 to ${MAX_PHOTOS} photos* of the *${pa.optionTitle}*.\n` +
-        'Reply *done* once you have sent all photos.'
+      `✅ Location received.\n\n📸 Now please send *exactly ${REQUIRED_PHOTOS} photos* of the *${pa.optionTitle}*.\n` +
+        `Your ticket will be submitted automatically once we receive all ${REQUIRED_PHOTOS} photos.`
     )
     .catch(() => {});
   return true;
@@ -110,13 +112,9 @@ async function handleImageMessage({ phone, mediaId }) {
       .catch(() => {});
     return true;
   }
-  if (pa.mediaUrls.length >= MAX_PHOTOS) {
-    await meta
-      .sendText(
-        phone,
-        `📸 We already have ${MAX_PHOTOS} photos for this ticket. Reply *done* to submit.`
-      )
-      .catch(() => {});
+  if (pa.mediaUrls.length >= REQUIRED_PHOTOS) {
+    // Already received the required number of photos; the next save will
+    // finalise the ticket. This branch is just a safety net for races.
     return true;
   }
 
@@ -139,16 +137,17 @@ async function handleImageMessage({ phone, mediaId }) {
   await member.save();
 
   const have = pa.mediaUrls.length;
-  if (have >= MAX_PHOTOS) {
-    // Auto-finalise after the 3rd photo.
+  if (have >= REQUIRED_PHOTOS) {
+    // Auto-finalise once we have the exact number of required photos.
     await finaliseTicket(member);
     return true;
   }
+  const remaining = REQUIRED_PHOTOS - have;
   await meta
     .sendText(
       phone,
-      `✅ Photo ${have} of up to ${MAX_PHOTOS} received.\n\n` +
-        'Send another photo or reply *done* to submit.'
+      `✅ Photo ${have} of ${REQUIRED_PHOTOS} received.\n\n` +
+        `Please send *${remaining} more photo${remaining === 1 ? '' : 's'}* to submit your ticket.`
     )
     .catch(() => {});
   return true;
@@ -192,20 +191,15 @@ async function handleTextDuringPending({ phone, text }) {
   }
 
   if (pa.step === 'awaiting_photos') {
-    if (t === 'done' || t === 'finish' || t === 'submit') {
-      if (pa.mediaUrls.length === 0) {
-        await meta
-          .sendText(phone, '📸 Please send at least one photo before submitting.')
-          .catch(() => {});
-        return true;
-      }
-      await finaliseTicket(member);
-      return true;
-    }
+    // Photos must be uploaded — no text shortcuts. Any text input (including
+    // 'hi', 'done', 'submit', etc.) just re-prompts with the remaining count.
+    const remaining = REQUIRED_PHOTOS - pa.mediaUrls.length;
     await meta
       .sendText(
         phone,
-        `📸 Send up to ${MAX_PHOTOS} photos of the *${pa.optionTitle}*, or reply *done* when finished.`
+        `📸 Please send *${remaining} more photo${remaining === 1 ? '' : 's'}* of the *${pa.optionTitle}* ` +
+          `to submit your ticket (${pa.mediaUrls.length} of ${REQUIRED_PHOTOS} uploaded so far).\n\n` +
+          'Reply *cancel* to abort.'
       )
       .catch(() => {});
     return true;
