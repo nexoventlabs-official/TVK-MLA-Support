@@ -34,6 +34,7 @@ function buildRegistrationFlowJSON() {
           has_error: { type: 'boolean', __example__: false },
           init_phone: { type: 'string', __example__: '919999999999' },
           init_name: { type: 'string', __example__: '' },
+          init_epic: { type: 'string', __example__: '' },
         },
         layout: {
           type: 'SingleColumnLayout',
@@ -51,7 +52,7 @@ function buildRegistrationFlowJSON() {
             {
               type: 'TextBody',
               text:
-                'Vanakkam 🙏\n\nPlease register once to access TVK Public Grievance services. Enter your *EPIC (Voter ID)* number and *Date of Birth* below.',
+                'Vanakkam 🙏\n\nPlease register once to access TVK Public Grievance services. Enter your EPIC (Voter ID) number and Date of Birth below.',
             },
             {
               type: 'TextBody',
@@ -65,6 +66,7 @@ function buildRegistrationFlowJSON() {
               required: true,
               'helper-text': 'e.g. RJE0667071',
               'input-type': 'text',
+              'init-value': '${data.init_epic}',
             },
             {
               type: 'DatePicker',

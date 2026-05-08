@@ -228,10 +228,26 @@ router.post('/', async (req, res) => {
     return sendResponse(res, response, aesKeyBuffer, ivBuffer);
   } catch (err) {
     dbg('HANDLER_ERROR', { message: err.message, stack: err.stack });
-    const fallback = {
-      screen: 'INFO',
-      data: { info_title: 'Something went wrong', info_body: 'Please try again later.' },
-    };
+    const isReg = isRegistrationToken(flow_token) || isRegistrationScreen(screen);
+    // The fallback screen MUST exist in the active flow's routing_model,
+    // otherwise the WhatsApp client silently drops the response and the
+    // Register / Continue buttons appear "dead" to the user.
+    const fallback = isReg
+      ? {
+          screen: 'REG_DONE',
+          data: {
+            info_title: '⚠️ Something went wrong',
+            info_body:
+              'We could not complete your registration right now. Please type *hi* and try again in a moment.',
+          },
+        }
+      : {
+          screen: 'INFO',
+          data: {
+            info_title: 'Something went wrong',
+            info_body: 'Please try again later.',
+          },
+        };
     return sendResponse(res, fallback, aesKeyBuffer, ivBuffer);
   }
 });
@@ -376,8 +392,17 @@ async function memberDisplayName(phone) {
   }
 }
 
+async function safeLoadImages() {
+  try {
+    return await loadAllImages();
+  } catch (err) {
+    dbg('IMAGE_LOAD_ERROR', { message: err.message });
+    return {};
+  }
+}
+
 async function handleRegInit(flow_token) {
-  const images = await loadAllImages();
+  const images = await safeLoadImages();
   const phone = phoneFromToken(flow_token);
   const initName = await memberDisplayName(phone);
   return {
@@ -389,11 +414,12 @@ async function handleRegInit(flow_token) {
       has_error: false,
       init_phone: phone,
       init_name: initName,
+      init_epic: '',
     },
   };
 }
 
-async function regStartScreen(images, phone, error = '') {
+async function regStartScreen(images, phone, error = '', initEpic = '') {
   const initName = await memberDisplayName(phone);
   return {
     screen: 'REG_START',
@@ -404,6 +430,7 @@ async function regStartScreen(images, phone, error = '') {
       has_error: !!error,
       init_phone: phone,
       init_name: initName,
+      init_epic: initEpic,
     },
   };
 }
@@ -444,7 +471,7 @@ function regDoneScreen(name) {
 
 async function handleRegDataExchange({ screen, data, flow_token }) {
   const phone = phoneFromToken(flow_token);
-  const images = await loadAllImages();
+  const images = await safeLoadImages();
   const action = data?.action;
 
   // ─── REG_START → REG_CONFIRM (lookup) / REG_MANUAL / REG_START (with error) ───
@@ -460,7 +487,8 @@ async function handleRegDataExchange({ screen, data, flow_token }) {
         return regStartScreen(
           images,
           phone,
-          'Please enter both EPIC number and Date of Birth.'
+          'Please enter both EPIC number and Date of Birth.',
+          epic
         );
       }
       let voter = null;
@@ -472,14 +500,16 @@ async function handleRegDataExchange({ screen, data, flow_token }) {
         return regStartScreen(
           images,
           phone,
-          'Voter database is temporarily unavailable. Please try again or register manually.'
+          'Voter database is temporarily unavailable. Please try again or register manually.',
+          epic
         );
       }
       if (!voter) {
         return regStartScreen(
           images,
           phone,
-          `No voter record found for EPIC "${epic}". Please check the number or register manually.`
+          `No voter record found for EPIC "${epic}". Please check the number or register manually.`,
+          epic
         );
       }
       // Stash dob + voter snapshot on the Member record so the next screen
