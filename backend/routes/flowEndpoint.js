@@ -15,7 +15,7 @@ const { SERVICES, getServiceById, getOption } = require('../services/serviceCata
 const { findVoterByEpic } = require('../services/voterDb');
 const { getAction, needsDetailsForm } = require('../services/issueActions');
 const { generateTicketId } = require('../services/ticketing');
-const { MAIN_MENU_KEYS } = require('../services/menuImageKeys');
+const { MAIN_MENU_KEYS, SOCIAL_KEYS } = require('../services/menuImageKeys');
 const Member = require('../models/Member');
 const ServiceRequest = require('../models/ServiceRequest');
 const Event = require('../models/Event');
@@ -100,9 +100,11 @@ function clearImageCache() {
 async function loadAllImages() {
   if (imgCache.data && Date.now() - imgCache.ts < IMG_TTL) return imgCache.data;
 
-  const keys = ['flow_welcome_banner', 'header_events'];
+  const keys = ['flow_welcome_banner', 'header_events', 'header_social'];
   // Top-level main-menu icons (Your Requests, Events, Raise Issue, Contact MLA, Social, Helplines)
   for (const m of MAIN_MENU_KEYS) keys.push(m.key);
+  // Social platform icons for SOCIAL_SELECT
+  for (const s of SOCIAL_KEYS) keys.push(s.key);
   for (const s of SERVICES) {
     keys.push(s.iconKey, s.bannerKey);
     for (const o of s.options) keys.push(o.iconKey);
@@ -279,6 +281,34 @@ async function handleInit(_flow_token) {
 }
 
 /* ───────── MAIN_MENU helpers ───────── */
+/**
+ * Build a SUCCESS response for data_exchange. WhatsApp closes the flow
+ * immediately (no "Tap Close" terminal screen) and sends the `params` back
+ * to the webhook in nfm_reply.response_json. Use this for MAIN_MENU picks
+ * that should close the flow and trigger a follow-up message directly.
+ */
+function successScreen(params = {}) {
+  return {
+    screen: 'SUCCESS',
+    data: {
+      extension_message_response: {
+        params,
+      },
+    },
+  };
+}
+
+function buildSocialList(images) {
+  return [
+    { id: 'facebook',  iconKey: 'icon_social_facebook',  title: 'Facebook',      description: 'Official Facebook page' },
+    { id: 'instagram', iconKey: 'icon_social_instagram', title: 'Instagram',     description: 'Official Instagram handle' },
+    { id: 'youtube',   iconKey: 'icon_social_youtube',   title: 'YouTube',       description: 'Official YouTube channel' },
+    { id: 'twitter',   iconKey: 'icon_social_twitter',   title: 'X (Twitter)',   description: 'Official X handle' },
+  ].map((p) =>
+    withImage({ id: p.id, title: p.title, description: p.description }, images[p.iconKey])
+  );
+}
+
 function buildMainMenu(images) {
   const tiles = [
     { id: 'my_requests',  iconKey: 'icon_main_my_requests', title: 'Your Requests',     description: 'Track your tickets' },
@@ -402,25 +432,26 @@ async function handleDataExchange({ screen, data, flow_token }) {
       };
     }
     if (sel === 'contact_mla') {
-      return infoScreen({
-        title: 'Contact MLA Office',
-        body: 'Tap *Close* to receive our office contact details on WhatsApp.',
-        ...encodePostAction('contact_mla'),
-      });
-    }
-    if (sel === 'social_media') {
-      return infoScreen({
-        title: 'Social Media',
-        body: 'Tap *Close* and we will send you links to follow us on Facebook, Instagram, YouTube and X.',
-        ...encodePostAction('social_media'),
-      });
+      // Auto-close the flow; webhook dispatcher sends the MLA contact card
+      // with a tap-to-call vCard and a branded image/body message.
+      return successScreen({ flow_token, post_action: 'contact_mla' });
     }
     if (sel === 'helplines') {
-      return infoScreen({
-        title: 'Helplines',
-        body: 'Tap *Close* to receive the helpline directory.',
-        ...encodePostAction('helplines'),
-      });
+      // Auto-close the flow; webhook dispatcher sends the helpline CTA URL.
+      return successScreen({ flow_token, post_action: 'helplines' });
+    }
+    if (sel === 'social_media') {
+      // Navigate to SOCIAL_SELECT so the user picks a platform. The
+      // dispatcher sends a platform-specific CTA URL once that screen's
+      // Continue closes the flow.
+      return {
+        screen: 'SOCIAL_SELECT',
+        data: {
+          social_banner: images.header_social || '',
+          has_social_banner: !!images.header_social,
+          social_options: buildSocialList(images),
+        },
+      };
     }
     return handleInit(flow_token);
   }

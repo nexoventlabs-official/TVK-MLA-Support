@@ -60,16 +60,57 @@ function decodePostData(b64) {
 
 async function sendContactMla(phone) {
   const banner = await flowImages.getUrl('header_contact_mla');
-  const body =
+
+  // 1) Branding image + office info body so the user has full context.
+  const intro =
     `*${CONTACT_MLA.name}*\n\n` +
-    `📞 Phone: ${CONTACT_MLA.phone}\n` +
-    `📧 Email: ${CONTACT_MLA.email}\n` +
+    `📞 ${CONTACT_MLA.phone}\n` +
+    `📧 ${CONTACT_MLA.email}\n` +
     `🏢 ${CONTACT_MLA.address}\n\n` +
-    `Tap the number above to call our office directly.`;
+    `Tap the contact card below — then tap *Call* to reach our office directly.`;
   if (banner) {
-    await meta.sendImage(phone, banner, body);
+    await meta.sendImage(phone, banner, intro).catch(() => {});
   } else {
-    await meta.sendText(phone, body);
+    await meta.sendText(phone, intro).catch(() => {});
+  }
+
+  // 2) WhatsApp vCard. Tapping the card opens Save/Call options; tapping
+  //    the phone row opens the dialer — this is our effective Call CTA
+  //    (WhatsApp's standard interactive messages do not expose a `tel:`
+  //    button outside approved templates).
+  const phoneDigits = String(CONTACT_MLA.phone).replace(/\D/g, '');
+  const formattedPhone = phoneDigits.startsWith('+')
+    ? CONTACT_MLA.phone
+    : `+${phoneDigits}`;
+  const contact = {
+    name: {
+      formatted_name: CONTACT_MLA.name,
+      first_name: CONTACT_MLA.name,
+    },
+    org: { company: 'Tamilaga Vettri Kazhagam', title: 'MLA Office' },
+    phones: [
+      {
+        phone: formattedPhone,
+        type: 'WORK',
+        wa_id: phoneDigits,
+      },
+    ],
+    emails: CONTACT_MLA.email
+      ? [{ email: CONTACT_MLA.email, type: 'WORK' }]
+      : undefined,
+    addresses: CONTACT_MLA.address
+      ? [{ street: CONTACT_MLA.address, type: 'WORK' }]
+      : undefined,
+  };
+  try {
+    await meta.sendContact(phone, contact);
+  } catch (err) {
+    // vCard delivery failed — the intro message still shows the phone
+    // number which WhatsApp auto-links for tap-to-call on most clients.
+    console.warn(
+      '[postActionDispatcher] sendContact failed:',
+      err.response?.data || err.message
+    );
   }
 }
 
@@ -92,7 +133,69 @@ async function sendHelplines(phone) {
   });
 }
 
-async function sendSocialMedia(phone) {
+/**
+ * Per-platform metadata used to render the platform-specific CTA URL
+ * message (image header + body + green Open-in-<platform> button).
+ */
+const SOCIAL_PLATFORMS = {
+  facebook: {
+    url: SOCIAL_LINKS.facebook,
+    iconKey: 'icon_social_facebook',
+    title: 'Facebook',
+    emoji: '📘',
+    ctaLabel: 'Open Facebook',
+  },
+  instagram: {
+    url: SOCIAL_LINKS.instagram,
+    iconKey: 'icon_social_instagram',
+    title: 'Instagram',
+    emoji: '📸',
+    ctaLabel: 'Open Instagram',
+  },
+  youtube: {
+    url: SOCIAL_LINKS.youtube,
+    iconKey: 'icon_social_youtube',
+    title: 'YouTube',
+    emoji: '▶️',
+    ctaLabel: 'Open YouTube',
+  },
+  twitter: {
+    url: SOCIAL_LINKS.twitter,
+    iconKey: 'icon_social_twitter',
+    title: 'X (Twitter)',
+    emoji: '🐦',
+    ctaLabel: 'Open X (Twitter)',
+  },
+};
+
+/**
+ * Send a per-platform follow card with the platform's icon as an image
+ * header and a green CTA URL button that opens that page. Falls back to
+ * the legacy multi-link text if the flow sent no platform (older flow
+ * cached on Meta) or the platform is unknown.
+ */
+async function sendSocialPlatform(phone, { platform } = {}) {
+  const spec = SOCIAL_PLATFORMS[String(platform || '').trim().toLowerCase()];
+  if (!spec || !spec.url) return sendSocialMediaLegacy(phone);
+  const banner = await flowImages.getUrl(spec.iconKey);
+  const body =
+    `${spec.emoji} *Follow TVK on ${spec.title}*\n\n` +
+    `Tap *${spec.ctaLabel}* below to open our official ${spec.title} page.`;
+  await meta.sendCtaUrl(phone, {
+    headerImageUrl: banner || undefined,
+    headerText: !banner ? spec.title : undefined,
+    body,
+    footer: 'TVK – Tamilaga Vettri Kazhagam',
+    ctaLabel: spec.ctaLabel,
+    ctaUrl: spec.url,
+  });
+}
+
+/**
+ * Legacy social dump kept as a safety net for clients that closed the
+ * flow without a `platform` payload (cached flow JSON, manual testing).
+ */
+async function sendSocialMediaLegacy(phone) {
   const banner = await flowImages.getUrl('header_social');
   const body =
     '*Follow TVK online* 🇮🇳\n\n' +
@@ -450,7 +553,9 @@ async function dispatch({ phone, postAction, postDataB64, rawPayload = {} }) {
         await sendHelplines(phone);
         return;
       case 'social_media':
-        await sendSocialMedia(phone);
+        // New SOCIAL_SELECT flow closes with payload.platform set; older
+        // clients (cached flow JSON) may omit it → legacy multi-link dump.
+        await sendSocialPlatform(phone, payload);
         return;
       case 'url':
         await sendUrlCta(phone, payload);

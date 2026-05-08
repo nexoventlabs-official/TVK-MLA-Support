@@ -147,6 +147,31 @@ async function sendLocationRequest(to, body) {
 }
 
 /**
+ * Send a WhatsApp contact (vCard) message. The contact's phone rows are
+ * tappable on WhatsApp — tapping opens the dialer, giving us a tap-to-call
+ * CTA for free (WhatsApp's interactive messages do not expose a native
+ * `tel:` button outside approved templates).
+ *
+ * `contact` is a single object per Meta's contacts schema:
+ *   { name: { formatted_name, first_name? }, org?, phones: [{ phone, type?, wa_id? }], emails?, addresses? }
+ */
+async function sendContact(to, contact) {
+  const { baseUrl, accessToken } = cfg();
+  const phone = String(to).replace(/\D/g, '');
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: phone,
+    type: 'contacts',
+    contacts: [contact],
+  };
+  const { data } = await api.post(`${baseUrl}/messages`, payload, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return data;
+}
+
+/**
  * Download a media object the user uploaded (image / location-shared image /
  * etc.) from Meta. Returns a Buffer + mimeType. Two-step: first GET the
  * media metadata to obtain the temporary URL, then GET that URL with the
@@ -420,6 +445,7 @@ module.exports = {
   sendDocument,
   sendCtaUrl,
   sendLocationRequest,
+  sendContact,
   downloadMedia,
   sendFlowMessage,
   sendTemplate,

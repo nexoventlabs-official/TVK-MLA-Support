@@ -29,11 +29,12 @@ function buildFlowJSON() {
     version: '7.0',
     data_api_version: '3.0',
     routing_model: {
-      MAIN_MENU: ['MY_REQUESTS', 'EVENTS', 'SERVICE_SELECT', 'INFO'],
+      MAIN_MENU: ['MY_REQUESTS', 'EVENTS', 'SERVICE_SELECT', 'SOCIAL_SELECT', 'INFO'],
       MY_REQUESTS: ['MY_REQUEST_DETAIL', 'INFO'],
       MY_REQUEST_DETAIL: ['INFO'],
       EVENTS: ['EVENT_DETAILS', 'INFO'],
       EVENT_DETAILS: ['INFO'],
+      SOCIAL_SELECT: [],
       SERVICE_SELECT: ['OPTION_SELECT', 'INFO'],
       OPTION_SELECT: ['DETAILS', 'INFO'],
       DETAILS: ['INFO'],
@@ -261,6 +262,73 @@ function buildFlowJSON() {
               'on-click-action': {
                 name: 'data_exchange',
                 payload: { action: 'event_detail_close' },
+              },
+            },
+          ],
+        },
+      },
+
+      // ─── SOCIAL_SELECT ──────────────────────────────────────────────────
+      // Terminal RadioButtonsGroup of platforms. Tap Continue closes the
+      // flow with `post_action: 'social_media'` + the chosen `platform`;
+      // the dispatcher then sends a platform-specific CTA URL message.
+      {
+        id: 'SOCIAL_SELECT',
+        title: 'Social Media',
+        terminal: true,
+        success: true,
+        data: {
+          social_banner: { type: 'string', __example__: 'iVBORw0KGgo' },
+          has_social_banner: { type: 'boolean', __example__: false },
+          social_options: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                image: { type: 'string' },
+              },
+            },
+            __example__: [
+              { id: 'facebook', title: 'Facebook', description: 'Official Facebook page' },
+              { id: 'instagram', title: 'Instagram', description: 'Official Instagram handle' },
+              { id: 'youtube', title: 'YouTube', description: 'Official YouTube channel' },
+              { id: 'twitter', title: 'X (Twitter)', description: 'Official X handle' },
+            ],
+          },
+        },
+        layout: {
+          type: 'SingleColumnLayout',
+          children: [
+            {
+              type: 'Image',
+              src: '${data.social_banner}',
+              width: 1000,
+              height: 200,
+              'scale-type': 'cover',
+              'alt-text': 'Social Media',
+              visible: '${data.has_social_banner}',
+            },
+            { type: 'TextHeading', text: 'Follow TVK online' },
+            { type: 'TextBody', text: 'Choose a platform to open:' },
+            {
+              type: 'RadioButtonsGroup',
+              name: 'selected_platform',
+              label: 'Platforms',
+              required: true,
+              'data-source': '${data.social_options}',
+            },
+            {
+              type: 'Footer',
+              label: 'Continue',
+              'on-click-action': {
+                name: 'complete',
+                payload: {
+                  post_action: 'social_media',
+                  platform: '${form.selected_platform}',
+                },
               },
             },
           ],
