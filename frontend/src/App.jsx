@@ -11,6 +11,7 @@ import Voters from './pages/Voters.jsx';
 import VoterDetail from './pages/VoterDetail.jsx';
 import Campaigns from './pages/Campaigns.jsx';
 import FlowImages from './pages/FlowImages.jsx';
+import Events from './pages/Events.jsx';
 
 function App() {
   const [auth, setAuth] = useState(null);
@@ -55,6 +56,7 @@ function App() {
           <Route path="voters" element={<Voters />} />
           <Route path="voters/:id" element={<VoterDetail />} />
           <Route path="campaigns" element={<Campaigns />} />
+          <Route path="events" element={<Events />} />
           <Route path="flow-images" element={<FlowImages />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

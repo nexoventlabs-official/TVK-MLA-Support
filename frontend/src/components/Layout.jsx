@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   Megaphone,
   Image as ImageIcon,
+  CalendarDays,
   LogOut,
   Menu,
 } from 'lucide-react';
@@ -17,6 +18,7 @@ const NAV = [
   { to: '/members', label: 'Members', icon: Users },
   { to: '/voters', label: 'Voters', icon: ShieldCheck },
   { to: '/campaigns', label: 'Campaigns', icon: Megaphone },
+  { to: '/events', label: 'Events', icon: CalendarDays },
   { to: '/flow-images', label: 'Flow Images', icon: ImageIcon },
 ];
 

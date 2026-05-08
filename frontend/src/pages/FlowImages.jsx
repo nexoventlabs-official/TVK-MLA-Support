@@ -1,16 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
-import { Upload, Trash2, Image as ImageIcon, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  Upload,
+  Trash2,
+  Image as ImageIcon,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  ExternalLink,
+} from 'lucide-react';
 import api from '../api';
 
-const STATIC_GROUP_LABELS = {
-  banners: 'Welcome Flow Banner',
-  chatbot: 'Chatbot Welcome Image',
-  service_icons: 'Service Selection Icons',
-  sub_banners: 'Sub-Screen Banners (per service)',
-};
+// Ordered group labels. Groups not listed here are rendered at the bottom.
+const GROUP_LABELS = [
+  ['banners', 'Welcome Flow Banner'],
+  ['chatbot', 'Chatbot Welcome Image'],
+  ['main_menu', 'Main Menu Icons (6 tiles)'],
+  ['cta_headers', 'Branch Headers (Contact MLA, Helplines, Social, Events)'],
+  ['social', 'Social Media Icons'],
+  ['service_icons', 'Service Selection Icons (9 services)'],
+  ['sub_banners', 'Sub-Screen Banners (per service)'],
+  ['issue_headers', 'Per-Issue Message Headers'],
+  ['pdf_documents', 'PDF Documents (forms / applications)'],
+];
 
 function prettyOptionLabel(group) {
-  // group looks like 'options_civic_works' → 'Options: Civic Works'
   if (!group.startsWith('options_')) return group;
   const id = group.slice('options_'.length);
   return `Options — ${id.replace(/_/g, ' ')}`;
@@ -55,7 +69,7 @@ export default function FlowImages() {
   };
 
   const onClear = async (key) => {
-    if (!confirm('Remove this image?')) return;
+    if (!confirm('Remove this file?')) return;
     await api.delete(`/flow-images/${key}`);
     load();
   };
@@ -69,6 +83,7 @@ export default function FlowImages() {
     const group = groups[gkey] || [];
     if (!group.length) return null;
     const open = openGroups[gkey] ?? defaultOpen;
+    const isPdf = gkey === 'pdf_documents';
     return (
       <div key={gkey} className="card overflow-hidden">
         <button
@@ -76,7 +91,12 @@ export default function FlowImages() {
           onClick={() => setOpenGroups({ ...openGroups, [gkey]: !open })}
           className="w-full px-5 py-3 bg-brand-50 border-b border-brand-100 font-semibold text-brand-800 flex items-center justify-between"
         >
-          <span>{label} <span className="text-xs text-brand-600 ml-2">{group.length} slots</span></span>
+          <span>
+            {label}{' '}
+            <span className="text-xs text-brand-600 ml-2">
+              {group.length} slot{group.length === 1 ? '' : 's'}
+            </span>
+          </span>
           {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>
         {open && (
@@ -84,7 +104,23 @@ export default function FlowImages() {
             {group.map((item) => (
               <div key={item.key} className="border border-gray-200 rounded-lg p-3 flex flex-col">
                 <div className="aspect-square bg-gray-50 rounded-md overflow-hidden flex items-center justify-center mb-2">
-                  {item.url ? (
+                  {isPdf ? (
+                    item.url ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex flex-col items-center justify-center gap-1 text-brand-700 hover:text-brand-900"
+                      >
+                        <FileText size={42} />
+                        <span className="text-xs inline-flex items-center gap-1">
+                          Open PDF <ExternalLink size={10} />
+                        </span>
+                      </a>
+                    ) : (
+                      <FileText size={42} className="text-gray-300" />
+                    )
+                  ) : item.url ? (
                     <img src={item.url} alt={item.label} className="w-full h-full object-cover" />
                   ) : (
                     <ImageIcon size={36} className="text-gray-300" />
@@ -95,7 +131,7 @@ export default function FlowImages() {
                 <div className="mt-3 flex gap-2">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept={isPdf ? 'application/pdf' : 'image/*'}
                     ref={(el) => (inputs.current[item.key] = el)}
                     className="hidden"
                     onChange={(e) => onUpload(item.key, e.target.files?.[0])}
@@ -105,7 +141,13 @@ export default function FlowImages() {
                     disabled={uploadingKey === item.key}
                     className="btn-primary !py-1.5 flex-1 !text-xs"
                   >
-                    {uploadingKey === item.key ? 'Uploading…' : <><Upload size={14} /> {item.url ? 'Replace' : 'Upload'}</>}
+                    {uploadingKey === item.key ? (
+                      'Uploading…'
+                    ) : (
+                      <>
+                        <Upload size={14} /> {item.url ? 'Replace' : 'Upload'}
+                      </>
+                    )}
                   </button>
                   {item.url && (
                     <button onClick={() => onClear(item.key)} className="btn-danger !py-1.5 !text-xs">
@@ -126,14 +168,18 @@ export default function FlowImages() {
     );
   };
 
+  const knownGroupKeys = GROUP_LABELS.map(([k]) => k);
   const optionGroupKeys = Object.keys(groups).filter((k) => k.startsWith('options_'));
+  const extraGroupKeys = Object.keys(groups).filter(
+    (k) => !knownGroupKeys.includes(k) && !k.startsWith('options_')
+  );
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brand-900">Flow Images</h1>
         <p className="text-sm text-gray-600">
-          Upload the banner & icon images used by the WhatsApp chatbot and flow screens. Changes go live within a few seconds (cache invalidates on upload, ~10 min otherwise).
+          Upload banners, icons and PDF documents used by the WhatsApp chatbot and grievance flow. Changes go live within a few seconds (cache invalidates on upload, ~10 min otherwise).
         </p>
       </div>
 
@@ -141,8 +187,11 @@ export default function FlowImages() {
         <div className="card p-8 text-center text-gray-500">Loading…</div>
       ) : (
         <>
-          {Object.keys(STATIC_GROUP_LABELS).map((gkey) => renderGroup(gkey, STATIC_GROUP_LABELS[gkey], true))}
+          {GROUP_LABELS.map(([gkey, label], idx) =>
+            renderGroup(gkey, label, idx < 4 /* main groups open by default */)
+          )}
           {optionGroupKeys.map((gkey) => renderGroup(gkey, prettyOptionLabel(gkey), false))}
+          {extraGroupKeys.map((gkey) => renderGroup(gkey, gkey, false))}
         </>
       )}
     </div>

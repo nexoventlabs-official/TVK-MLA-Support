@@ -11,6 +11,12 @@ const FlowImageSchema = new mongoose.Schema(
     label: { type: String, default: '' },
     url: { type: String, default: '' },
     publicId: { type: String, default: '' },
+    /**
+     * Cloudinary resource_type needed to correctly DELETE the asset later.
+     *   - 'image' (default) for PNG/JPG banners & icons
+     *   - 'raw'   for PDF documents uploaded against pdf_documents keys
+     */
+    resourceType: { type: String, enum: ['image', 'raw'], default: 'image' },
   },
   { timestamps: true }
 );
