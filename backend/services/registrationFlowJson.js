@@ -32,6 +32,7 @@ function buildRegistrationFlowJSON() {
           has_welcome_banner: { type: 'boolean', __example__: true },
           error_text: { type: 'string', __example__: '' },
           has_error: { type: 'boolean', __example__: false },
+          init_phone: { type: 'string', __example__: '919999999999' },
         },
         layout: {
           type: 'SingleColumnLayout',
@@ -87,8 +88,13 @@ function buildRegistrationFlowJSON() {
               type: 'EmbeddedLink',
               text: "Don't have EPIC? Register Manually",
               'on-click-action': {
-                name: 'data_exchange',
-                payload: { action: 'goto_manual' },
+                name: 'navigate',
+                next: { type: 'screen', name: 'REG_MANUAL' },
+                payload: {
+                  welcome_banner: '${data.welcome_banner}',
+                  has_welcome_banner: '${data.has_welcome_banner}',
+                  init_phone: '${data.init_phone}',
+                },
               },
             },
           ],
