@@ -9,6 +9,34 @@ const mongoose = require('mongoose');
  * at the moment of registration, so admin views remain consistent even if
  * the source roll is later updated.
  */
+/**
+ * A short-lived state machine attached to a Member that tracks "the user closed
+ * a flow and we now expect them to share a location / send photos before we
+ * generate a ticket". Cleared once the action completes or `expiresAt` passes.
+ *
+ * Steps used by the issueActions dispatcher:
+ *   awaiting_location  → next location message progresses to awaiting_photos (or completes)
+ *   awaiting_photos    → next image messages append to mediaUrls; "done"/2-min idle finalises
+ *   done               → terminal (cleared on next greeting / new flow)
+ */
+const PendingActionSchema = new mongoose.Schema(
+  {
+    kind: { type: String, default: '' },         // e.g. 'location_photos_ticket'
+    serviceId: { type: String, default: '' },
+    optionId: { type: String, default: '' },
+    serviceTitle: { type: String, default: '' },
+    optionTitle: { type: String, default: '' },
+    step: { type: String, default: '' },         // 'awaiting_location' | 'awaiting_photos' | 'done'
+    minPhotos: { type: Number, default: 0 },
+    geo: { type: mongoose.Schema.Types.Mixed, default: null },
+    mediaUrls: { type: [String], default: [] },
+    ticketId: { type: String, default: '' },     // populated once the ticket row exists
+    startedAt: { type: Date, default: Date.now },
+    expiresAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const VoterSnapshotSchema = new mongoose.Schema(
   {
     voterId: { type: Number, default: null },
@@ -48,6 +76,7 @@ const MemberSchema = new mongoose.Schema(
     messageCount: { type: Number, default: 0 },
     lastMessage: { type: String, default: '' },
     requestCount: { type: Number, default: 0 },
+    pendingAction: { type: PendingActionSchema, default: null },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

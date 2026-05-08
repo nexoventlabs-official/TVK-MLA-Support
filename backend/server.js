@@ -15,6 +15,7 @@ const serviceRequestsRoutes = require('./routes/serviceRequests');
 const campaignsRoutes = require('./routes/campaigns');
 const flowImagesRoutes = require('./routes/flowImages');
 const dashboardRoutes = require('./routes/dashboard');
+const eventsRoutes = require('./routes/events');
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use('/api/service-requests', serviceRequestsRoutes);
 app.use('/api/campaigns', campaignsRoutes);
 app.use('/api/flow-images', flowImagesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/events', eventsRoutes);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found', path: req.originalUrl }));
 
