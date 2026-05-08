@@ -507,65 +507,11 @@ async function handleDataExchange({ screen, data, flow_token }) {
     };
   }
 
-  // ─── OPTION_SELECT → DETAILS or terminal INFO with post_action ───
-  if (screen === 'OPTION_SELECT') {
-    const sid = data?.service_id;
-    const oid = data?.selected_option;
-    const svc = getServiceById(sid);
-    const opt = getOption(sid, oid);
-    if (!svc || !opt) {
-      return infoScreen({ title: 'Selection not found', body: 'Please try again from the menu.' });
-    }
-    const action = getAction(svc.id, opt.id);
-    // Issues that need the existing DETAILS form first.
-    if (needsDetailsForm(action)) {
-      const member = phone ? await Member.findOne({ phone }).lean() : null;
-      return {
-        screen: 'DETAILS',
-        data: {
-          service_id: svc.id,
-          option_id: opt.id,
-          service_title: svc.title,
-          option_title: opt.title,
-          init_phone: phone,
-          init_name: member?.name || member?.profileName || '',
-          // Mid-day-meal needs an extra School Name input. Hidden for everything else.
-          show_school_name: opt.id === 'mid_day_meal_issue',
-          school_label: 'School name',
-        },
-      };
-    }
-    // Issues whose terminal action runs OUTSIDE the flow (URL / PDF /
-    // location-photos / location-only). Close the flow now and let the
-    // webhook dispatcher do the rest after the user taps Close.
-    if (action) {
-      const titles = {
-        url: '🔗 Use this link',
-        pdf: '📄 Document ready',
-        location_only_ticket: '📍 Share your location',
-        location_photos_ticket: '📍 Share location & photos',
-      };
-      const bodies = {
-        url: `We will send you a link about *${opt.title}* on WhatsApp once you tap Close.`,
-        pdf: `We will send you a PDF about *${opt.title}* on WhatsApp once you tap Close.`,
-        location_only_ticket: `Tap *Close* and share your *current location* in the chat. We will register a *${opt.title}* ticket for you.`,
-        location_photos_ticket: `Tap *Close* and share your *current location* in the chat. After that, please send 1–3 photos of the ${opt.title.toLowerCase()}. A ticket will be generated for you.`,
-      };
-      return infoScreen({
-        title: titles[action.kind] || 'Almost there',
-        body: bodies[action.kind] || `Tap Close to continue with your ${opt.title} request.`,
-        ...encodePostAction(action.kind, {
-          serviceId: svc.id,
-          optionId: opt.id,
-          serviceTitle: svc.title,
-          optionTitle: opt.title,
-        }),
-      });
-    }
-    // Catalog option without an action mapping — should not happen because
-    // the smoke test verifies 100% coverage. Render a safe fallback.
-    return infoScreen({ title: 'Coming soon', body: `Support for *${opt.title}* is coming soon.` });
-  }
+  // OPTION_SELECT is now a TERMINAL screen — it never round-trips here.
+  // The webhook receives a `complete` payload with post_action='option_select'
+  // and dispatches via `dispatchOptionSelect()` in postActionDispatcher.js
+  // (direct senders for url/pdf/location/contact_mla, fresh sub-flow card
+  // pointing at DETAILS for ticket / details_then_url issues).
 
   // ─── DETAILS → submit (creates a ticketed request, then closes the flow with
   //   a post_action so the webhook can fire the confirmation message — and,
@@ -939,5 +885,32 @@ function normalizeGender(g) {
   return 'Other';
 }
 
+/**
+ * Pre-fetch the data needed to open the DETAILS form via
+ * flow_action='navigate' for a given service+option pair. Returns null
+ * if the pair is unknown. Used by postActionDispatcher when the user
+ * picks a ticket / details_then_url issue in OPTION_SELECT.
+ */
+async function buildDetailsScreen(serviceId, optionId, phone) {
+  const svc = getServiceById(serviceId);
+  const opt = getOption(serviceId, optionId);
+  if (!svc || !opt) return null;
+  const member = phone ? await Member.findOne({ phone }).lean() : null;
+  return {
+    screen: 'DETAILS',
+    data: {
+      service_id: svc.id,
+      option_id: opt.id,
+      service_title: svc.title,
+      option_title: opt.title,
+      init_phone: phone,
+      init_name: member?.name || member?.profileName || '',
+      show_school_name: opt.id === 'mid_day_meal_issue',
+      school_label: 'School name',
+    },
+  };
+}
+
 module.exports = router;
 module.exports.clearImageCache = clearImageCache;
+module.exports.buildDetailsScreen = buildDetailsScreen;

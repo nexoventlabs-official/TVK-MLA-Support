@@ -22,7 +22,10 @@ const flowImages = require('./flowImages');
 const Member = require('../models/Member');
 const ServiceRequest = require('../models/ServiceRequest');
 const { getAction } = require('./issueActions');
+const { getServiceById, getOption } = require('./serviceCatalog');
 const { generateTicketId } = require('./ticketing');
+// flowEndpoint exposes screen builders we use to send sub-flow messages.
+const flowEndpoint = require('../routes/flowEndpoint');
 
 // ─── Static config (placeholders the user can override later via admin) ───
 const CONTACT_MLA = {
@@ -297,19 +300,149 @@ async function sendWelcomeFlowSafe(phone, { body, banner } = {}) {
   }
 }
 
+/**
+ * Send a fresh flow message that opens the same Meta flow directly at the
+ * given `screen` with seeded `data`. Used for ticket / details_then_url
+ * issues so the user is handed a brand-new flow card pre-pointed at the
+ * DETAILS form (no redundant "Tap Close" intermediate screen).
+ */
+async function sendSubFlow(phone, { screen, data, bodyText, headerImageUrl, headerText, flowCta, flowToken }) {
+  const flowId = process.env.WHATSAPP_FLOW_ID;
+  if (!flowId) {
+    await meta.sendText(phone, bodyText || 'Tap to continue.').catch(() => {});
+    return;
+  }
+  const mode =
+    String(process.env.WHATSAPP_FLOW_STATUS || '').toUpperCase() === 'PUBLISHED'
+      ? 'published'
+      : 'draft';
+  try {
+    await meta.sendFlowMessage(phone, {
+      flowId,
+      flowCta: flowCta || 'Open Form',
+      headerImageUrl: headerImageUrl || undefined,
+      headerText: !headerImageUrl ? headerText || undefined : undefined,
+      bodyText: bodyText || 'Tap to continue.',
+      footerText: 'TVK – Tamilaga Vettri Kazhagam',
+      flowToken: flowToken || `welcome_${phone}`,
+      mode,
+      screen,
+      data,
+    });
+  } catch (err) {
+    console.error('[postActionDispatcher] sendSubFlow failed:', err.response?.data || err.message);
+    await meta
+      .sendText(phone, bodyText || 'Sorry, please type *hi* to open the menu again.')
+      .catch(() => {});
+  }
+}
+
+/**
+ * Dispatch the user's OPTION_SELECT pick. The flow has already closed; we
+ * look up the action via issueActions and route accordingly:
+ *   url / pdf / contact_mla / helplines           → existing senders
+ *   location_only_ticket / location_photos_ticket → start state machine
+ *   ticket / details_then_url                     → fresh DETAILS sub-flow
+ */
+async function dispatchOptionSelect(phone, { service_id, selected_option } = {}) {
+  const svc = getServiceById(service_id);
+  const opt = getOption(service_id, selected_option);
+  if (!svc || !opt) {
+    await meta
+      .sendText(phone, 'Sorry, that selection is no longer available. Please type *hi* to try again.')
+      .catch(() => {});
+    return;
+  }
+  const action = getAction(svc.id, opt.id);
+  const payload = {
+    serviceId: svc.id,
+    optionId: opt.id,
+    serviceTitle: svc.title,
+    optionTitle: opt.title,
+  };
+  switch (action?.kind) {
+    case 'url':
+      await sendUrlCta(phone, payload);
+      return;
+    case 'pdf':
+      await sendPdf(phone, payload);
+      return;
+    case 'contact_mla':
+      await sendContactMla(phone);
+      return;
+    case 'helplines':
+      await sendHelplines(phone);
+      return;
+    case 'location_only_ticket':
+    case 'location_photos_ticket':
+      await startLocationFlow(phone, { ...payload, kind: action.kind });
+      return;
+    case 'ticket':
+    case 'details_then_url': {
+      const screenObj = await flowEndpoint.buildDetailsScreen(svc.id, opt.id, phone);
+      if (!screenObj) {
+        await meta
+          .sendText(phone, 'Sorry, that issue type is unavailable right now.')
+          .catch(() => {});
+        return;
+      }
+      const banner = await flowImages.getUrl(action?.headerKey || svc.bannerKey);
+      await sendSubFlow(phone, {
+        ...screenObj,
+        bodyText:
+          `*${opt.title}*\n\n` +
+          `Tap *Open Form* below to share a few details so we can register your *${opt.title}* ticket.`,
+        headerImageUrl: banner || undefined,
+        headerText: !banner ? opt.title : undefined,
+        flowCta: 'Open Form',
+        flowToken: `details_${phone}`,
+      });
+      return;
+    }
+    default:
+      console.warn('[postActionDispatcher] unhandled option kind:', action?.kind, {
+        service_id,
+        selected_option,
+      });
+      await meta
+        .sendText(
+          phone,
+          `Support for *${opt.title}* is coming soon. Please type *hi* to choose another option.`
+        )
+        .catch(() => {});
+  }
+}
+
 /* ─────────────────────────── orchestrator ─────────────────────────── */
 
 /**
  * Top-level dispatch called by the webhook when the user closes the welcome
  * flow with a non-empty `post_action`.
+ *
+ * `rawPayload` is the entire parsed nfm_reply.response_json. Top-level
+ * fields a `complete` action sets directly (e.g. OPTION_SELECT carries
+ * `service_id` + `selected_option`) merge with the base64-decoded payload
+ * so all senders see a uniform object.
  */
-async function dispatch({ phone, postAction, postDataB64 }) {
+async function dispatch({ phone, postAction, postDataB64, rawPayload = {} }) {
   if (!phone || !postAction) return;
-  const payload = decodePostData(postDataB64);
+  const decoded = decodePostData(postDataB64);
+  const payload = {
+    ...rawPayload,
+    ...decoded,
+  };
+  // Strip control fields so senders see clean data.
+  delete payload.post_action;
+  delete payload.post_data_b64;
+  delete payload.flow_token;
   console.log('[postActionDispatcher] dispatch', { phone, postAction, payload });
 
   try {
     switch (postAction) {
+      // OPTION_SELECT closed the flow with the picked issue id.
+      case 'option_select':
+        await dispatchOptionSelect(phone, payload);
+        return;
       case 'contact_mla':
         await sendContactMla(phone);
         return;

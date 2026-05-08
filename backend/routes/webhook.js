@@ -128,11 +128,17 @@ router.post('/meta', async (req, res) => {
               let flowToken = '';
               let postAction = '';
               let postDataB64 = '';
+              let rawPayload = {};
               try {
                 const parsed = respJson ? JSON.parse(respJson) : {};
                 flowToken = parsed.flow_token || '';
                 postAction = parsed.post_action || '';
                 postDataB64 = parsed.post_data_b64 || '';
+                // Forward the full parsed object so the dispatcher can read
+                // any top-level fields a `complete` action put in payload —
+                // e.g. OPTION_SELECT now passes `service_id` + `selected_option`
+                // directly (not base64-encoded).
+                rawPayload = parsed;
               } catch (e) {
                 console.warn('[webhook] nfm_reply parse failed:', e.message);
               }
@@ -150,7 +156,7 @@ router.post('/meta', async (req, res) => {
               // (2) Welcome flow finished WITH a post_action → dispatch.
               if (postAction) {
                 await postActionDispatcher
-                  .dispatch({ phone: from, postAction, postDataB64 })
+                  .dispatch({ phone: from, postAction, postDataB64, rawPayload })
                   .catch((e) =>
                     console.error('[webhook] postAction dispatch failed:', e.message)
                   );

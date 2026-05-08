@@ -185,6 +185,11 @@ async function sendFlowMessage(to, options) {
     footerText,
     flowToken = `welcome_${phone}`,
     mode = 'published',
+    // Optional: open the flow directly at a specific screen with seeded
+    // data. When `screen` is provided we use flow_action='navigate' so the
+    // client jumps straight to that screen and skips the INIT round-trip.
+    screen,
+    data: seedData,
   } = options;
 
   let header;
@@ -192,6 +197,22 @@ async function sendFlowMessage(to, options) {
     header = { type: 'image', image: { link: headerImageUrl } };
   } else if (headerText) {
     header = { type: 'text', text: headerText };
+  }
+
+  const useNavigate = !!screen;
+  const parameters = {
+    flow_message_version: '3',
+    flow_token: flowToken,
+    flow_id: flowId,
+    flow_cta: flowCta,
+    mode,
+    flow_action: useNavigate ? 'navigate' : 'data_exchange',
+  };
+  if (useNavigate) {
+    parameters.flow_action_payload = {
+      screen,
+      ...(seedData ? { data: seedData } : {}),
+    };
   }
 
   const payload = {
@@ -205,14 +226,7 @@ async function sendFlowMessage(to, options) {
       body: { text: bodyText },
       action: {
         name: 'flow',
-        parameters: {
-          flow_message_version: '3',
-          flow_token: flowToken,
-          flow_id: flowId,
-          flow_cta: flowCta,
-          mode,
-          flow_action: 'data_exchange',
-        },
+        parameters,
       },
     },
   };
