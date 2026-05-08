@@ -103,6 +103,12 @@ async function handleImageMessage({ phone, mediaId }) {
   const member = await loadPendingMember(phone);
   if (!member) return false;
   const pa = member.pendingAction;
+
+  // Step gate: photos are only accepted while awaiting_photos. 'finalising'
+  // and any post-finalise state silently ignore extra photos so 4th+
+  // images (or photos that arrive after the ticket is generated) don't
+  // bother the user.
+  if (pa.step === 'finalising') return true;
   if (pa.step !== 'awaiting_photos') {
     await meta
       .sendText(
@@ -113,15 +119,16 @@ async function handleImageMessage({ phone, mediaId }) {
     return true;
   }
   if (pa.mediaUrls.length >= REQUIRED_PHOTOS) {
-    // Already received the required number of photos; the next save will
-    // finalise the ticket. This branch is just a safety net for races.
+    // Cap reached; the finalising claim below will pick it up.
     return true;
   }
 
   let uploadedUrl = '';
   try {
     const { buffer } = await meta.downloadMedia(mediaId);
-    const up = await cloudinary.uploadBuffer(buffer, { folder: `tvk/tickets/${pa.serviceId}/${pa.optionId}` });
+    const up = await cloudinary.uploadBuffer(buffer, {
+      folder: `tvk/tickets/${pa.serviceId}/${pa.optionId}`,
+    });
     uploadedUrl = up.secure_url;
   } catch (err) {
     console.error('[pendingActionHandler] photo upload failed:', err.response?.data || err.message);
@@ -131,24 +138,49 @@ async function handleImageMessage({ phone, mediaId }) {
     return true;
   }
 
-  pa.mediaUrls.push(uploadedUrl);
-  pa.expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-  member.markModified('pendingAction');
-  await member.save();
+  // Atomic push so concurrent handlers (3 photos arriving in parallel as
+  // separate webhook POSTs) don't clobber each other's writes. $slice caps
+  // the array at REQUIRED_PHOTOS even if more than 3 photos race in.
+  const updated = await Member.findOneAndUpdate(
+    { phone, 'pendingAction.kind': { $in: ['location_photos_ticket'] } },
+    {
+      $push: {
+        'pendingAction.mediaUrls': { $each: [uploadedUrl], $slice: REQUIRED_PHOTOS },
+      },
+      $set: {
+        'pendingAction.expiresAt': new Date(Date.now() + 30 * 60 * 1000),
+      },
+    },
+    { new: true }
+  );
+  if (!updated || !updated.pendingAction) return true;
 
-  const have = pa.mediaUrls.length;
-  if (have >= REQUIRED_PHOTOS) {
-    // All required photos received. Send a single "please wait" so the user
-    // knows we are processing, then finalise the ticket (which sends the
-    // ticket confirmation + the welcome flow re-launch).
-    await meta
-      .sendText(phone, '⏳ All 3 photos received. Please wait while we generate your ticket…')
-      .catch(() => {});
-    await finaliseTicket(member);
+  const have = updated.pendingAction.mediaUrls.length;
+  if (have < REQUIRED_PHOTOS) {
+    // Photos 1 and 2: stay silent (WhatsApp's ✓✓ ticks are enough ack).
     return true;
   }
-  // Photos 1 and 2: stay silent. The user can see WhatsApp's own ✓✓ delivery
-  // ticks; we don't need to ack each upload.
+
+  // We have all required photos. Use a CAS to atomically claim the
+  // finalising step — only one of the parallel handlers wins.
+  const claimed = await Member.findOneAndUpdate(
+    {
+      phone,
+      'pendingAction.step': 'awaiting_photos',
+      [`pendingAction.mediaUrls.${REQUIRED_PHOTOS - 1}`]: { $exists: true },
+    },
+    { $set: { 'pendingAction.step': 'finalising' } },
+    { new: true }
+  );
+  if (!claimed) {
+    // Another concurrent handler already claimed finalisation.
+    return true;
+  }
+
+  await meta
+    .sendText(phone, `⏳ All ${REQUIRED_PHOTOS} photos received. Please wait while we generate your ticket…`)
+    .catch(() => {});
+  await finaliseTicket(claimed);
   return true;
 }
 
