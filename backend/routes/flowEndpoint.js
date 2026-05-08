@@ -13,8 +13,12 @@ const flowImages = require('../services/flowImages');
 const { urlToBase64 } = require('../services/imageBase64');
 const { SERVICES, getServiceById, getOption } = require('../services/serviceCatalog');
 const { findVoterByEpic } = require('../services/voterDb');
+const { getAction, needsDetailsForm } = require('../services/issueActions');
+const { generateTicketId } = require('../services/ticketing');
+const { MAIN_MENU_KEYS } = require('../services/menuImageKeys');
 const Member = require('../models/Member');
 const ServiceRequest = require('../models/ServiceRequest');
+const Event = require('../models/Event');
 
 const router = express.Router();
 
@@ -96,7 +100,9 @@ function clearImageCache() {
 async function loadAllImages() {
   if (imgCache.data && Date.now() - imgCache.ts < IMG_TTL) return imgCache.data;
 
-  const keys = ['flow_welcome_banner'];
+  const keys = ['flow_welcome_banner', 'header_events'];
+  // Top-level main-menu icons (Your Requests, Events, Raise Issue, Contact MLA, Social, Helplines)
+  for (const m of MAIN_MENU_KEYS) keys.push(m.key);
   for (const s of SERVICES) {
     keys.push(s.iconKey, s.bannerKey);
     for (const o of s.options) keys.push(o.iconKey);
@@ -241,13 +247,10 @@ router.post('/', async (req, res) => {
               'We could not complete your registration right now. Please type *hi* and try again in a moment.',
           },
         }
-      : {
-          screen: 'INFO',
-          data: {
-            info_title: 'Something went wrong',
-            info_body: 'Please try again later.',
-          },
-        };
+      : infoScreen({
+          title: 'Something went wrong',
+          body: 'Please try again later.',
+        });
     return sendResponse(res, fallback, aesKeyBuffer, ivBuffer);
   }
 });
@@ -266,19 +269,226 @@ function sendResponse(res, obj, aesKeyBuffer, ivBuffer) {
 async function handleInit(_flow_token) {
   const images = await loadAllImages();
   return {
-    screen: 'SERVICE_SELECT',
+    screen: 'MAIN_MENU',
     data: {
       welcome_banner: images.flow_welcome_banner || '',
       has_welcome_banner: !!images.flow_welcome_banner,
-      services: buildServiceList(images),
+      main_options: buildMainMenu(images),
     },
   };
+}
+
+/* ───────── MAIN_MENU helpers ───────── */
+function buildMainMenu(images) {
+  const tiles = [
+    { id: 'my_requests',  iconKey: 'icon_main_my_requests', title: 'Your Requests',     description: 'Track your tickets' },
+    { id: 'events',       iconKey: 'icon_main_events',      title: 'Upcoming Events',   description: 'Public events & camps' },
+    { id: 'raise_issue',  iconKey: 'icon_main_raise_issue', title: 'Raise Issue',       description: '9 service categories' },
+    { id: 'contact_mla',  iconKey: 'icon_main_contact_mla', title: 'Contact MLA Office', description: 'Speak to our team' },
+    { id: 'social_media', iconKey: 'icon_main_social',      title: 'Social Media',      description: 'Follow us online' },
+    { id: 'helplines',    iconKey: 'icon_main_helplines',   title: 'Helplines',         description: 'Emergency numbers' },
+  ];
+  return tiles.map((t) => withImage({ id: t.id, title: t.title, description: t.description }, images[t.iconKey]));
+}
+
+/** Build the post-action carrier the INFO terminal screen passes back via
+ *  `complete` so the webhook can fire the URL / PDF / location follow-up
+ *  message after the user taps Close. */
+function encodePostAction(kind, payload = {}) {
+  if (!kind) return { post_action: '', post_data_b64: '' };
+  const json = JSON.stringify({ kind, ...payload });
+  return { post_action: kind, post_data_b64: Buffer.from(json, 'utf8').toString('base64') };
+}
+
+function infoScreen({ title, body, post_action = '', post_data_b64 = '' }) {
+  return {
+    screen: 'INFO',
+    data: {
+      info_title: title,
+      info_body: body,
+      post_action,
+      post_data_b64,
+    },
+  };
+}
+
+function formatEventDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+async function buildEventsList() {
+  const events = await Event.find({ active: true, toDate: { $gte: new Date() } })
+    .sort({ fromDate: 1 })
+    .limit(20)
+    .lean();
+  return events.map((ev) => ({
+    id: String(ev._id),
+    title: (ev.title || '').slice(0, 30),
+    description: `${formatEventDate(ev.fromDate)}${ev.location ? ' · ' + ev.location.slice(0, 24) : ''}`,
+  }));
+}
+
+/** Status pill text shown to the user. */
+const STATUS_LABEL = {
+  pending: 'Pending',
+  accepted: 'Accepted',
+  processing: 'Processing',
+  completed: 'Completed ✅',
+  rejected: 'Rejected',
+};
+
+async function buildMyRequestsList(phone) {
+  if (!phone) return [];
+  const items = await ServiceRequest.find({ phone, ticketId: { $ne: null } })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+  return items.map((r) => ({
+    id: String(r._id),
+    title: `${r.ticketId} · ${STATUS_LABEL[r.status] || r.status}`,
+    description: `${r.optionTitle || ''}${r.createdAt ? ' · ' + formatEventDate(r.createdAt) : ''}`.slice(0, 60),
+  }));
 }
 
 /* ───────── data_exchange ───────── */
 async function handleDataExchange({ screen, data, flow_token }) {
   const phone = phoneFromToken(flow_token);
   const images = await loadAllImages();
+
+  // ─── MAIN_MENU → branch ───
+  if (screen === 'MAIN_MENU') {
+    const sel = String(data?.selected_main || '').trim();
+    if (sel === 'my_requests') {
+      const requests = await buildMyRequestsList(phone);
+      if (!requests.length) {
+        return infoScreen({
+          title: 'No requests yet',
+          body: 'You have not raised any tickets yet. Tap *Close* and choose *Raise Issue* from the menu.',
+        });
+      }
+      // RadioButtonsGroup needs at least one item; we already early-returned otherwise.
+      return {
+        screen: 'MY_REQUESTS',
+        data: { requests, empty_text: '' },
+      };
+    }
+    if (sel === 'events') {
+      const events = await buildEventsList();
+      if (!events.length) {
+        return infoScreen({
+          title: 'No upcoming events',
+          body: 'There are no events scheduled right now. Please check back soon 🙏',
+        });
+      }
+      return {
+        screen: 'EVENTS',
+        data: {
+          events_banner: images.header_events || '',
+          has_events_banner: !!images.header_events,
+          events,
+          empty_text: '',
+        },
+      };
+    }
+    if (sel === 'raise_issue') {
+      return {
+        screen: 'SERVICE_SELECT',
+        data: {
+          service_banner: images.flow_welcome_banner || '',
+          has_service_banner: !!images.flow_welcome_banner,
+          services: buildServiceList(images),
+        },
+      };
+    }
+    if (sel === 'contact_mla') {
+      return infoScreen({
+        title: 'Contact MLA Office',
+        body: 'Tap *Close* to receive our office contact details on WhatsApp.',
+        ...encodePostAction('contact_mla'),
+      });
+    }
+    if (sel === 'social_media') {
+      return infoScreen({
+        title: 'Social Media',
+        body: 'Tap *Close* and we will send you links to follow us on Facebook, Instagram, YouTube and X.',
+        ...encodePostAction('social_media'),
+      });
+    }
+    if (sel === 'helplines') {
+      return infoScreen({
+        title: 'Helplines',
+        body: 'Tap *Close* to receive the helpline directory.',
+        ...encodePostAction('helplines'),
+      });
+    }
+    return handleInit(flow_token);
+  }
+
+  // ─── MY_REQUESTS → MY_REQUEST_DETAIL ───
+  if (screen === 'MY_REQUESTS') {
+    const id = String(data?.selected_request || '').trim();
+    let req = null;
+    try {
+      req = await ServiceRequest.findById(id).lean();
+    } catch {
+      req = null;
+    }
+    if (!req || (phone && req.phone !== phone)) {
+      return infoScreen({
+        title: 'Ticket not found',
+        body: 'Please type *hi* to open the menu and try again.',
+      });
+    }
+    return {
+      screen: 'MY_REQUEST_DETAIL',
+      data: {
+        ticket_id: req.ticketId || '—',
+        ticket_status: STATUS_LABEL[req.status] || req.status,
+        ticket_meta: `${req.optionTitle || ''} · ${formatEventDate(req.createdAt)}`,
+        ticket_description: req.description || '(No description provided)',
+        ticket_notes: req.notes ? `Note: ${req.notes}` : '',
+      },
+    };
+  }
+
+  // ─── MY_REQUEST_DETAIL → INFO ───
+  if (screen === 'MY_REQUEST_DETAIL') {
+    return infoScreen({ title: 'Vanakkam 🙏', body: 'Type *hi* anytime to open the menu again.' });
+  }
+
+  // ─── EVENTS → EVENT_DETAILS ───
+  if (screen === 'EVENTS') {
+    const id = String(data?.selected_event || '').trim();
+    let ev = null;
+    try {
+      ev = await Event.findById(id).lean();
+    } catch {
+      ev = null;
+    }
+    if (!ev) {
+      return infoScreen({ title: 'Event not found', body: 'Please go back and try again.' });
+    }
+    let imgB64 = '';
+    if (ev.image) {
+      imgB64 = await urlToBase64(ev.image, { width: 1000, height: 500, format: 'jpeg' }).catch(() => '');
+    }
+    return {
+      screen: 'EVENT_DETAILS',
+      data: {
+        event_image: imgB64 || '',
+        has_event_image: !!imgB64,
+        event_title: ev.title || '',
+        event_meta: `${formatEventDate(ev.fromDate)} – ${formatEventDate(ev.toDate)}${ev.location ? ' · ' + ev.location : ''}`,
+        event_description: ev.description || '',
+      },
+    };
+  }
+
+  // ─── EVENT_DETAILS → INFO ───
+  if (screen === 'EVENT_DETAILS') {
+    return infoScreen({ title: 'Thanks 🙏', body: 'Type *hi* anytime to open the menu again.' });
+  }
 
   // ─── SERVICE_SELECT → OPTION_SELECT ───
   if (screen === 'SERVICE_SELECT') {
@@ -297,33 +507,69 @@ async function handleDataExchange({ screen, data, flow_token }) {
     };
   }
 
-  // ─── OPTION_SELECT → DETAILS ───
+  // ─── OPTION_SELECT → DETAILS or terminal INFO with post_action ───
   if (screen === 'OPTION_SELECT') {
     const sid = data?.service_id;
     const oid = data?.selected_option;
     const svc = getServiceById(sid);
     const opt = getOption(sid, oid);
     if (!svc || !opt) {
+      return infoScreen({ title: 'Selection not found', body: 'Please try again from the menu.' });
+    }
+    const action = getAction(svc.id, opt.id);
+    // Issues that need the existing DETAILS form first.
+    if (needsDetailsForm(action)) {
+      const member = phone ? await Member.findOne({ phone }).lean() : null;
       return {
-        screen: 'INFO',
-        data: { info_title: 'Selection not found', info_body: 'Please try again from the menu.' },
+        screen: 'DETAILS',
+        data: {
+          service_id: svc.id,
+          option_id: opt.id,
+          service_title: svc.title,
+          option_title: opt.title,
+          init_phone: phone,
+          init_name: member?.name || member?.profileName || '',
+          // Mid-day-meal needs an extra School Name input. Hidden for everything else.
+          show_school_name: opt.id === 'mid_day_meal_issue',
+          school_label: 'School name',
+        },
       };
     }
-    const member = phone ? await Member.findOne({ phone }).lean() : null;
-    return {
-      screen: 'DETAILS',
-      data: {
-        service_id: svc.id,
-        option_id: opt.id,
-        service_title: svc.title,
-        option_title: opt.title,
-        init_phone: phone,
-        init_name: member?.name || member?.profileName || '',
-      },
-    };
+    // Issues whose terminal action runs OUTSIDE the flow (URL / PDF /
+    // location-photos / location-only). Close the flow now and let the
+    // webhook dispatcher do the rest after the user taps Close.
+    if (action) {
+      const titles = {
+        url: '🔗 Use this link',
+        pdf: '📄 Document ready',
+        location_only_ticket: '📍 Share your location',
+        location_photos_ticket: '📍 Share location & photos',
+      };
+      const bodies = {
+        url: `We will send you a link about *${opt.title}* on WhatsApp once you tap Close.`,
+        pdf: `We will send you a PDF about *${opt.title}* on WhatsApp once you tap Close.`,
+        location_only_ticket: `Tap *Close* and share your *current location* in the chat. We will register a *${opt.title}* ticket for you.`,
+        location_photos_ticket: `Tap *Close* and share your *current location* in the chat. After that, please send 1–3 photos of the ${opt.title.toLowerCase()}. A ticket will be generated for you.`,
+      };
+      return infoScreen({
+        title: titles[action.kind] || 'Almost there',
+        body: bodies[action.kind] || `Tap Close to continue with your ${opt.title} request.`,
+        ...encodePostAction(action.kind, {
+          serviceId: svc.id,
+          optionId: opt.id,
+          serviceTitle: svc.title,
+          optionTitle: opt.title,
+        }),
+      });
+    }
+    // Catalog option without an action mapping — should not happen because
+    // the smoke test verifies 100% coverage. Render a safe fallback.
+    return infoScreen({ title: 'Coming soon', body: `Support for *${opt.title}* is coming soon.` });
   }
 
-  // ─── DETAILS → submit ───
+  // ─── DETAILS → submit (creates a ticketed request, then closes the flow with
+  //   a post_action so the webhook can fire the confirmation message — and,
+  //   for `details_then_url` actions, also send the relevant URL CTA). ───
   if (screen === 'DETAILS') {
     const sid = data?.service_id;
     const oid = data?.option_id;
@@ -332,26 +578,37 @@ async function handleDataExchange({ screen, data, flow_token }) {
     const name = (data?.name || '').trim();
     const description = (data?.description || '').trim();
     const location = (data?.location || '').trim();
+    const schoolName = (data?.school_name || '').trim();
 
     if (!svc || !opt || !phone || !name || !description) {
-      return {
-        screen: 'INFO',
-        data: { info_title: 'Missing details', info_body: 'Please fill in your name and a description.' },
-      };
+      return infoScreen({ title: 'Missing details', body: 'Please fill in your name and a description.' });
     }
 
-    await ServiceRequest.create({
-      phone,
-      name,
-      serviceId: svc.id,
-      serviceTitle: svc.title,
-      optionId: opt.id,
-      optionTitle: opt.title,
-      description,
-      location,
-    });
+    const action = getAction(svc.id, opt.id);
+    const ticketId = await generateTicketId();
 
-    // Update Member's saved name and request count
+    try {
+      await ServiceRequest.create({
+        ticketId,
+        phone,
+        name,
+        serviceId: svc.id,
+        serviceTitle: svc.title,
+        optionId: opt.id,
+        optionTitle: opt.title,
+        description,
+        location,
+        schoolName,
+        status: 'pending',
+      });
+    } catch (err) {
+      dbg('TICKET_CREATE_FAILED', { ticketId, error: err.message });
+      return infoScreen({
+        title: 'Could not save your request',
+        body: 'Please try again in a moment.',
+      });
+    }
+
     await Member.findOneAndUpdate(
       { phone },
       {
@@ -362,22 +619,29 @@ async function handleDataExchange({ screen, data, flow_token }) {
       { upsert: true, setDefaultsOnInsert: true }
     );
 
-    return {
-      screen: 'INFO',
-      data: {
-        info_title: '🙏 Request received',
-        info_body:
-          `Thank you ${name}!\n\n` +
-          `Your *${opt.title}* request under *${svc.title}* has been recorded. ` +
-          `Our team will review it and follow up on this WhatsApp number.`,
-      },
-    };
+    // Decide what the post-Close confirmation should look like.
+    //   - 'details_then_url' → send confirmation message with header image,
+    //     ticket id, body and the URL CTA.
+    //   - 'ticket' (or unmapped fallback) → send confirmation with header
+    //     image, ticket id, body and 'Choose Service' CTA.
+    const postKind = action?.kind === 'details_then_url' ? 'details_then_url' : 'ticket';
+    return infoScreen({
+      title: '🙏 Ticket Generated',
+      body:
+        `Thank you ${name}!\n\n` +
+        `Your ticket *${ticketId}* for *${opt.title}* under *${svc.title}* has been recorded.\n` +
+        'Tap *Close* to receive your confirmation on WhatsApp.',
+      ...encodePostAction(postKind, {
+        ticketId,
+        serviceId: svc.id,
+        optionId: opt.id,
+        serviceTitle: svc.title,
+        optionTitle: opt.title,
+      }),
+    });
   }
 
-  return {
-    screen: 'INFO',
-    data: { info_title: 'Vanakkam 🙏', info_body: 'Type *hi* to open the menu again.' },
-  };
+  return infoScreen({ title: 'Vanakkam 🙏', body: 'Type *hi* to open the menu again.' });
 }
 
 /* ───────── Registration flow ───────── */

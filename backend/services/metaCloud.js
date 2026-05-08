@@ -58,6 +58,88 @@ async function sendImage(to, imageUrl, caption = '') {
 }
 
 /**
+ * Send a document (PDF, etc.) by URL. Used for the "Seeds Subsidy" /
+ * "Flood Compensation" branches of the grievance flow that hand the user
+ * a downloadable form.
+ */
+async function sendDocument(to, { url, filename, caption = '' }) {
+  const { baseUrl, accessToken } = cfg();
+  const phone = String(to).replace(/\D/g, '');
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: phone,
+    type: 'document',
+    document: { link: url, filename: filename || 'document.pdf', caption },
+  };
+  const { data } = await api.post(`${baseUrl}/messages`, payload, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return data;
+}
+
+/**
+ * Send an interactive *CTA URL* message — header (image OR text), body,
+ * optional footer and a single tappable URL button. Used to hand the user
+ * the appropriate government portal URL after they pick a 'url' issue.
+ *
+ * `headerImageUrl` is preferred; falls back to `headerText` when no image.
+ */
+async function sendCtaUrl(to, { headerImageUrl, headerText, body, footer, ctaLabel, ctaUrl }) {
+  const { baseUrl, accessToken } = cfg();
+  const phone = String(to).replace(/\D/g, '');
+  if (!ctaLabel || !ctaUrl) throw new Error('sendCtaUrl: ctaLabel and ctaUrl are required');
+
+  let header;
+  if (headerImageUrl) header = { type: 'image', image: { link: headerImageUrl } };
+  else if (headerText) header = { type: 'text', text: String(headerText).slice(0, 60) };
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: phone,
+    type: 'interactive',
+    interactive: {
+      type: 'cta_url',
+      ...(header ? { header } : {}),
+      body: { text: body || '' },
+      ...(footer ? { footer: { text: String(footer).slice(0, 60) } } : {}),
+      action: {
+        name: 'cta_url',
+        parameters: { display_text: String(ctaLabel).slice(0, 20), url: ctaUrl },
+      },
+    },
+  };
+  const { data } = await api.post(`${baseUrl}/messages`, payload, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return data;
+}
+
+/**
+ * Download a media object the user uploaded (image / location-shared image /
+ * etc.) from Meta. Returns a Buffer + mimeType. Two-step: first GET the
+ * media metadata to obtain the temporary URL, then GET that URL with the
+ * Bearer token.
+ */
+async function downloadMedia(mediaId) {
+  const { graphRoot, accessToken } = cfg();
+  const meta = await api.get(`${graphRoot}/${mediaId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    params: { fields: 'url,mime_type,sha256,file_size' },
+  });
+  const mediaUrl = meta.data?.url;
+  if (!mediaUrl) throw new Error('Media URL not returned by Graph API');
+  const bin = await api.get(mediaUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    responseType: 'arraybuffer',
+    maxContentLength: 30 * 1024 * 1024,
+    maxBodyLength: 30 * 1024 * 1024,
+  });
+  return { buffer: Buffer.from(bin.data), mimeType: meta.data.mime_type || 'application/octet-stream' };
+}
+
+/**
  * Send an interactive Flow message.
  */
 async function sendFlowMessage(to, options) {
@@ -291,6 +373,9 @@ module.exports = {
   cfg,
   sendText,
   sendImage,
+  sendDocument,
+  sendCtaUrl,
+  downloadMedia,
   sendFlowMessage,
   sendTemplate,
   createFlow,

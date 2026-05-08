@@ -1,6 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const chatbot = require('../services/chatbot');
+const postActionDispatcher = require('../services/postActionDispatcher');
+const pendingActionHandler = require('../services/pendingActionHandler');
 
 const router = express.Router();
 
@@ -71,32 +73,110 @@ router.post('/meta', async (req, res) => {
           let text = '';
           let type = msg.type;
 
+          // ─── Location messages (state machine for grievance flow) ───
+          if (msg.type === 'location') {
+            const locationData = {
+              latitude: msg.location?.latitude,
+              longitude: msg.location?.longitude,
+              name: msg.location?.name || '',
+              address: msg.location?.address || '',
+            };
+            await chatbot
+              .trackInbound({ phone: from, profileName, text: '[location]' })
+              .catch(() => {});
+            const handled = await pendingActionHandler
+              .handleLocationMessage({ phone: from, locationData })
+              .catch((e) => {
+                console.error('[webhook] location handler failed:', e.message);
+                return false;
+              });
+            if (!handled) {
+              // No pending action: ignore the location silently. The bot
+              // never asks for a location outside an active state machine.
+            }
+            continue;
+          }
+
+          // ─── Image messages (photo upload during awaiting_photos) ───
+          if (msg.type === 'image') {
+            const mediaId = msg.image?.id;
+            await chatbot
+              .trackInbound({ phone: from, profileName, text: '[image]' })
+              .catch(() => {});
+            if (mediaId) {
+              await pendingActionHandler
+                .handleImageMessage({ phone: from, mediaId })
+                .catch((e) =>
+                  console.error('[webhook] image handler failed:', e.message)
+                );
+            }
+            continue;
+          }
+
           if (msg.type === 'text') text = msg.text?.body || '';
           else if (msg.type === 'interactive') {
             // Flow `complete` callbacks arrive as interactive.nfm_reply.
-            // We forward them to handleFlowComplete so the bot can send the
-            // grievance "Choose Service" welcome flow automatically right
-            // after the user finishes the registration flow.
+            // Two reasons we forward them:
+            //   1. Registration flow `reg_<phone>` token  → handleFlowComplete
+            //      sends the grievance welcome flow next.
+            //   2. Welcome flow `welcome_<phone>` token   → the INFO terminal
+            //      screen carries `post_action` + `post_data_b64` which the
+            //      postActionDispatcher decodes to fire URL / PDF / location
+            //      / ticket follow-up messages.
             if (msg.interactive?.type === 'nfm_reply') {
               const respJson = msg.interactive?.nfm_reply?.response_json || '';
               let flowToken = '';
+              let postAction = '';
+              let postDataB64 = '';
               try {
                 const parsed = respJson ? JSON.parse(respJson) : {};
                 flowToken = parsed.flow_token || '';
+                postAction = parsed.post_action || '';
+                postDataB64 = parsed.post_data_b64 || '';
               } catch (e) {
                 console.warn('[webhook] nfm_reply parse failed:', e.message);
               }
+              await chatbot
+                .trackInbound({ phone: from, profileName, text: '[flow_complete]' })
+                .catch(() => {});
+
+              // (1) Registration flow finished → grievance welcome.
               await chatbot
                 .handleFlowComplete({ phone: from, flowToken })
                 .catch((e) =>
                   console.error('[webhook] handleFlowComplete failed:', e.message)
                 );
+
+              // (2) Welcome flow finished WITH a post_action → dispatch.
+              if (postAction) {
+                await postActionDispatcher
+                  .dispatch({ phone: from, postAction, postDataB64 })
+                  .catch((e) =>
+                    console.error('[webhook] postAction dispatch failed:', e.message)
+                  );
+              }
               continue;
             }
             text = msg.interactive?.button_reply?.title ||
               msg.interactive?.list_reply?.title || '';
           } else if (msg.type === 'button') {
             text = msg.button?.text || '';
+          }
+
+          // ─── Text input during a pending action takes priority ───
+          if (msg.type === 'text') {
+            const consumed = await pendingActionHandler
+              .handleTextDuringPending({ phone: from, text })
+              .catch((e) => {
+                console.error('[webhook] pending text handler failed:', e.message);
+                return false;
+              });
+            if (consumed) {
+              await chatbot
+                .trackInbound({ phone: from, profileName, text })
+                .catch(() => {});
+              continue;
+            }
           }
 
           await chatbot.handleInbound({ phone: from, profileName, type, text });
