@@ -11,6 +11,7 @@ import {
   Calendar as CalendarIcon,
   PieChart as PieIcon,
   BarChart3,
+  Grid3x3,
 } from 'lucide-react';
 import api from '../api';
 
@@ -49,6 +50,7 @@ export default function Dashboard() {
     timeline: [],
     memberGrowth: [],
     heatmap: [],
+    serviceHeatmap: [],
     statusBreakdown: {},
     meta: { timelineDays: 30, heatmapDays: 60 },
   });
@@ -150,6 +152,13 @@ export default function Dashboard() {
         </div>
         <StatusDonut breakdown={data.statusBreakdown} />
       </div>
+
+      {/* ─── Service × Weekday Heatmap ─── */}
+      <ServiceHeatmap
+        serviceHeatmap={data.serviceHeatmap}
+        byService={data.byService}
+        days={data.meta?.heatmapDays || 60}
+      />
 
       {/* ─── Service Distribution bar chart ─── */}
       <ServiceDistribution byService={data.byService} />
@@ -425,6 +434,156 @@ function ActivityHeatmap({ heatmap = [], days }) {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** ── Service Heatmap ─────────────────────────────────────────────
+ *  Service category (rows) × weekday (columns) heatmap. Answers the
+ *  question "which kind of grievance comes in on which day?". Uses
+ *  the same Mon-first weekday ordering as <ActivityHeatmap>, and
+ *  the same log-ish opacity ramp so a single dominant cell doesn't
+ *  flatten the rest of the grid.
+ *
+ *  Right-edge mini-bar shows each service's row total so the whole
+ *  panel doubles as a category leaderboard.
+ */
+function ServiceHeatmap({ serviceHeatmap = [], byService = [], days }) {
+  const { matrix, max, rowTotals, grandMax } = useMemo(() => {
+    // Build a {svcId -> rowIndex} lookup from the catalog-ordered
+    // byService list so rows render in the bot's order.
+    const order = byService.map((s) => s.id);
+    const idx = Object.fromEntries(order.map((id, i) => [id, i]));
+    const m = order.map(() => Array.from({ length: 7 }, () => 0));
+    let mx = 0;
+    serviceHeatmap.forEach((p) => {
+      const r = idx[p.svc];
+      if (r === undefined) return;
+      if (p.dow < 0 || p.dow > 6) return;
+      m[r][p.dow] = p.count;
+      if (p.count > mx) mx = p.count;
+    });
+    const totals = m.map((row) => row.reduce((s, v) => s + v, 0));
+    const gMax = Math.max(...totals, 1);
+    return { matrix: m, max: mx, rowTotals: totals, grandMax: gMax };
+  }, [serviceHeatmap, byService]);
+
+  const cellOpacity = (v) => {
+    if (!v) return 0;
+    if (!max) return 0;
+    const t = Math.min(1, Math.log(v + 1) / Math.log(max + 1));
+    return 0.18 + t * 0.82;
+  };
+
+  const totalRequests = rowTotals.reduce((s, v) => s + v, 0);
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="section-bar">
+        <div>
+          <div className="font-display font-semibold text-brand-900 tracking-tightest flex items-center gap-2">
+            <Grid3x3 size={14} className="text-brand-500" /> Service × Weekday Heatmap
+          </div>
+          <div className="text-[11px] text-brand-400 mt-0.5">
+            Which grievance categories arrive on which day · last {days} days
+          </div>
+        </div>
+        <div className="text-[11px] tabular text-brand-500">
+          <span className="font-mono font-semibold text-brand-900">{totalRequests}</span> requests
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-5">
+        {byService.length === 0 ? (
+          <div className="h-48 flex items-center justify-center text-sm text-brand-400">
+            No services configured.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="min-w-[640px]">
+              {/* Column header row: weekday labels */}
+              <div
+                className="grid items-end gap-[4px] mb-2"
+                style={{
+                  gridTemplateColumns: `160px repeat(7, minmax(0, 1fr)) 90px`,
+                }}
+              >
+                <div />
+                {DOW_LABELS.map((d) => (
+                  <div
+                    key={d}
+                    className="text-[10px] font-semibold tracking-wide uppercase text-brand-400 text-center"
+                  >
+                    {d}
+                  </div>
+                ))}
+                <div className="text-[10px] font-semibold tracking-wide uppercase text-brand-400 text-right pr-1">
+                  Total
+                </div>
+              </div>
+
+              {/* One row per service category */}
+              {byService.map((s, ri) => {
+                const rt = rowTotals[ri] || 0;
+                const barPct = (rt / grandMax) * 100;
+                return (
+                  <div
+                    key={s.id}
+                    className="grid items-center gap-[4px] mb-[4px]"
+                    style={{
+                      gridTemplateColumns: `160px repeat(7, minmax(0, 1fr)) 90px`,
+                    }}
+                  >
+                    <div
+                      className="text-[12px] font-medium text-brand-800 truncate pr-2"
+                      title={s.title}
+                    >
+                      {s.title}
+                    </div>
+                    {matrix[ri].map((v, dow) => (
+                      <div
+                        key={dow}
+                        title={`${s.title} · ${DOW_LABELS[dow]} — ${v} request${v === 1 ? '' : 's'}`}
+                        className="aspect-square rounded-[4px] bg-brand-100"
+                        style={
+                          v > 0
+                            ? { background: `rgba(10,10,10,${cellOpacity(v)})` }
+                            : undefined
+                        }
+                      />
+                    ))}
+                    {/* Row total chip + tiny proportional bar */}
+                    <div className="flex items-center gap-2 pl-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-brand-100 overflow-hidden">
+                        <span
+                          className="block h-full bg-brand-900 rounded-full"
+                          style={{ width: `${Math.max(2, barPct)}%` }}
+                        />
+                      </div>
+                      <span className="font-mono tabular text-[12px] font-semibold text-brand-900 w-7 text-right">
+                        {rt}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Intensity legend */}
+              <div className="flex items-center justify-end gap-1.5 mt-3 text-[10px] text-brand-400">
+                <span className="tracking-wide uppercase font-semibold">Less</span>
+                {[0.18, 0.4, 0.6, 0.8, 1].map((o) => (
+                  <span
+                    key={o}
+                    className="inline-block w-3 h-3 rounded-[3px]"
+                    style={{ background: `rgba(10,10,10,${o})` }}
+                  />
+                ))}
+                <span className="tracking-wide uppercase font-semibold">More</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -44,50 +44,71 @@ router.get('/stats', auth, async (_req, res) => {
     // ─── Aggregations powering the dashboard charts ──────────────
     // Run them in parallel — Mongo handles them on indexed fields
     // (createdAt + status + serviceId are all indexed).
-    const [byServiceRaw, timelineRaw, heatmapRaw, statusRaw, memberGrowthRaw] =
-      await Promise.all([
-        ServiceRequest.aggregate([
-          { $group: { _id: '$serviceId', count: { $sum: 1 } } },
-        ]),
-        ServiceRequest.aggregate([
-          { $match: { createdAt: { $gte: timelineSince } } },
-          {
-            $group: {
-              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-              count: { $sum: 1 },
-            },
+    const [
+      byServiceRaw,
+      timelineRaw,
+      heatmapRaw,
+      serviceHeatmapRaw,
+      statusRaw,
+      memberGrowthRaw,
+    ] = await Promise.all([
+      ServiceRequest.aggregate([
+        { $group: { _id: '$serviceId', count: { $sum: 1 } } },
+      ]),
+      ServiceRequest.aggregate([
+        { $match: { createdAt: { $gte: timelineSince } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 },
           },
-          { $sort: { _id: 1 } },
-        ]),
-        ServiceRequest.aggregate([
-          { $match: { createdAt: { $gte: heatmapSince } } },
-          {
-            $group: {
-              _id: {
-                // Mongo $dayOfWeek returns 1=Sunday … 7=Saturday.
-                // We re-map on the client to put Mon first, but the
-                // raw value travels over the wire as-is.
-                dow: { $dayOfWeek: '$createdAt' },
-                hour: { $hour: '$createdAt' },
-              },
-              count: { $sum: 1 },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      ServiceRequest.aggregate([
+        { $match: { createdAt: { $gte: heatmapSince } } },
+        {
+          $group: {
+            _id: {
+              // Mongo $dayOfWeek returns 1=Sunday … 7=Saturday.
+              // We re-map on the client to put Mon first, but the
+              // raw value travels over the wire as-is.
+              dow: { $dayOfWeek: '$createdAt' },
+              hour: { $hour: '$createdAt' },
             },
+            count: { $sum: 1 },
           },
-        ]),
-        ServiceRequest.aggregate([
-          { $group: { _id: '$status', count: { $sum: 1 } } },
-        ]),
-        Member.aggregate([
-          { $match: { createdAt: { $gte: timelineSince } } },
-          {
-            $group: {
-              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-              count: { $sum: 1 },
+        },
+      ]),
+      // Service category × weekday matrix — answers "what kind of
+      // grievance comes in on which day?". Same time window as the
+      // hour-of-day heatmap so the two charts agree on totals.
+      ServiceRequest.aggregate([
+        { $match: { createdAt: { $gte: heatmapSince } } },
+        {
+          $group: {
+            _id: {
+              svc: '$serviceId',
+              dow: { $dayOfWeek: '$createdAt' },
             },
+            count: { $sum: 1 },
           },
-          { $sort: { _id: 1 } },
-        ]),
-      ]);
+        },
+      ]),
+      ServiceRequest.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ]),
+      Member.aggregate([
+        { $match: { createdAt: { $gte: timelineSince } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
 
     // Service distribution — keep ordered by SERVICES catalog so the
     // chart renders categories in the same order users see in the bot.
@@ -127,6 +148,14 @@ router.get('/stats', auth, async (_req, res) => {
       count: x.count,
     }));
 
+    // Service-category × weekday — same Mon-first remap, sparse rows
+    // dropped on the client into the catalog-ordered matrix.
+    const serviceHeatmap = serviceHeatmapRaw.map((x) => ({
+      svc: x._id.svc,
+      dow: (x._id.dow + 5) % 7,
+      count: x.count,
+    }));
+
     // Status breakdown — explicit zero defaults for every state so the
     // donut never has to special-case a missing key.
     const STATUSES = ['pending', 'accepted', 'processing', 'completed', 'rejected'];
@@ -159,6 +188,7 @@ router.get('/stats', auth, async (_req, res) => {
       timeline,
       memberGrowth,
       heatmap,
+      serviceHeatmap,
       statusBreakdown,
       // Kept for backward-compat with any other consumer / older
       // frontend bundles still pinned to the previous response shape.
