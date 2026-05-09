@@ -45,14 +45,14 @@ function buildRegistrationFlowJSON() {
               width: 1000,
               height: 125,
               'scale-type': 'cover',
-              'alt-text': 'TVK Public Grievance',
+              'alt-text': 'TVK Mylapore Grievance',
               visible: '${data.has_welcome_banner}',
             },
             { type: 'TextHeading', text: 'Voter Registration' },
             {
               type: 'TextBody',
               text:
-                'Vanakkam 🙏\n\nPlease register once to access TVK Public Grievance services. Enter your EPIC (Voter ID) number and Date of Birth below.',
+                'Vanakkam 🙏\n\nPlease register once to access TVK Mylapore Legislative Assembly Grievance Service. Enter your EPIC (Voter ID) number and Date of Birth below.',
             },
             {
               type: 'TextBody',
@@ -179,7 +179,7 @@ function buildRegistrationFlowJSON() {
               width: 1000,
               height: 125,
               'scale-type': 'cover',
-              'alt-text': 'TVK Public Grievance',
+              'alt-text': 'TVK Mylapore Grievance',
               visible: '${data.has_welcome_banner}',
             },
             { type: 'TextHeading', text: 'Register Manually' },

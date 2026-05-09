@@ -59,11 +59,11 @@ export default function Members() {
   const totalIssues = members.reduce((sum, m) => sum + (m.requestCount || 0), 0);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-4 bg-white/50 p-6 rounded-2xl border border-gray-100 shadow-sm backdrop-blur-sm">
         <div>
-          <h1 className="text-2xl font-bold text-brand-900">Members</h1>
-          <p className="text-sm text-gray-600">
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Members</h1>
+          <p className="text-sm font-medium text-gray-500 mt-1">
             {members.length} {filter === 'registered' ? 'registered' : 'contacts'} ·{' '}
             {totalIssues} issue{totalIssues === 1 ? '' : 's'} raised
           </p>
@@ -104,9 +104,9 @@ export default function Members() {
 
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading…</div>
+          <div className="p-12 text-center text-gray-500 font-medium">Loading members…</div>
         ) : members.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-12 text-center text-gray-500 font-medium">
             {filter === 'registered'
               ? 'No registered members yet. Members who complete the WhatsApp registration flow will appear here.'
               : 'No contacts yet. As soon as someone messages the bot they will appear here.'}
@@ -114,23 +114,23 @@ export default function Members() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+              <thead className="bg-gray-50/50 border-b border-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">WhatsApp</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-left">Age</th>
-                  <th className="px-4 py-3 text-left">Issues Raised</th>
-                  <th className="px-4 py-3 text-left">Last Seen</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-6 py-4 text-left">Name</th>
+                  <th className="px-6 py-4 text-left">WhatsApp</th>
+                  <th className="px-6 py-4 text-left">Status</th>
+                  <th className="px-6 py-4 text-left">Age</th>
+                  <th className="px-6 py-4 text-left">Issues Raised</th>
+                  <th className="px-6 py-4 text-left">Last Seen</th>
+                  <th className="px-6 py-4"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100/50">
                 {members.map((m) => {
                   const display = m.name || m.profileName || '—';
                   return (
-                    <tr key={m._id} className="hover:bg-gray-50 align-top">
-                      <td className="px-4 py-3">
+                    <tr key={m._id} className="hover:bg-gray-50/50 align-top transition-colors">
+                      <td className="px-6 py-4">
                         <Link to={`/members/${m._id}`} className="flex items-center gap-3 group">
                           <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-medium shrink-0">
                             {display[0]?.toUpperCase()}
@@ -147,12 +147,12 @@ export default function Members() {
                           </div>
                         </Link>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 text-gray-700">
                           <Phone size={14} /> {m.phone}
                         </span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {m.isRegistered ? (
                           <span
                             className={`pill inline-flex items-center gap-1 ${
@@ -170,10 +170,10 @@ export default function Members() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-700 font-medium">
                         {m.age != null ? `${m.age} yrs` : '—'}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
                         {m.requestCount ? (
                           <div className="space-y-1.5 max-w-md">
                             <div className="text-xs text-gray-500">
@@ -209,12 +209,12 @@ export default function Members() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                      <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1">
                           <Clock size={14} /> {new Date(m.lastSeenAt).toLocaleString()}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-6 py-4 text-right">
                         <Link
                           to={`/members/${m._id}`}
                           className="text-brand-700 hover:bg-brand-50 p-2 rounded-md inline-flex"

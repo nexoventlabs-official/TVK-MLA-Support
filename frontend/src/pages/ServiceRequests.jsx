@@ -74,11 +74,11 @@ export default function ServiceRequests() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-4 bg-white/50 p-6 rounded-2xl border border-gray-100 shadow-sm backdrop-blur-sm">
         <div>
-          <h1 className="text-2xl font-bold text-brand-900">Service Requests</h1>
-          <p className="text-sm text-gray-600">
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Service Requests</h1>
+          <p className="text-sm font-medium text-gray-500 mt-1">
             {items.length} {STATUS_LABELS[statusFilter] || 'total'} grievances submitted via WhatsApp.
           </p>
         </div>
@@ -131,14 +131,14 @@ export default function ServiceRequests() {
       ) : items.length === 0 ? (
         <div className="card p-10 text-center text-gray-500">No requests.</div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {items.map((r) => {
             const mapUrl = r.geo?.latitude && r.geo?.longitude
               ? `https://www.google.com/maps?q=${r.geo.latitude},${r.geo.longitude}`
               : null;
             return (
-              <div key={r._id} className="card p-4">
-                <div className="flex items-start justify-between flex-wrap gap-3">
+              <div key={r._id} className="card p-5 group hover:-translate-y-0.5 transition-transform duration-300">
+                <div className="flex items-start justify-between flex-wrap gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       {r.ticketId && (
@@ -202,9 +202,9 @@ export default function ServiceRequests() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-xl border border-gray-100/50">
                     <select
-                      className="input !py-1.5 !w-auto"
+                      className="input !py-2 !w-auto bg-white shadow-sm"
                       value={r.status}
                       onChange={(ev) => updateStatus(r._id, ev.target.value)}
                     >
@@ -214,18 +214,20 @@ export default function ServiceRequests() {
                         </option>
                       ))}
                     </select>
-                    <button onClick={() => remove(r._id)} className="text-red-600 hover:bg-red-50 p-2 rounded-md">
-                      <Trash2 size={16} />
+                    <button onClick={() => remove(r._id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2.5 rounded-lg transition-colors shadow-sm bg-white border border-red-100">
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
-                <textarea
-                  rows={2}
-                  placeholder="Internal notes…"
-                  defaultValue={r.notes || ''}
-                  onBlur={(ev) => updateNotes(r._id, ev.target.value)}
-                  className="input mt-3 text-sm"
-                />
+                <div className="mt-4 pt-4 border-t border-gray-100/50">
+                  <textarea
+                    rows={2}
+                    placeholder="Add internal notes here…"
+                    defaultValue={r.notes || ''}
+                    onBlur={(ev) => updateNotes(r._id, ev.target.value)}
+                    className="input w-full text-sm bg-gray-50/50 hover:bg-white focus:bg-white transition-colors placeholder:text-gray-400"
+                  />
+                </div>
               </div>
             );
           })}

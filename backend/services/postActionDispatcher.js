@@ -159,7 +159,7 @@ async function sendHelplines(phone) {
       '👶 Childline: *1098*\n' +
       '👩 Women: *181*\n\n' +
       'Tap below to view the full Tamil Nadu helpline directory.',
-    footer: 'TVK Public Grievance',
+    footer: 'TVK Mylapore Grievance',
     ctaLabel: 'Open Directory',
     ctaUrl: HELPLINES_URL,
   });
@@ -291,7 +291,7 @@ async function sendUrlCta(phone, { serviceId, optionId, optionTitle }) {
     headerImageUrl: banner || undefined,
     headerText: !banner ? optionTitle : undefined,
     body,
-    footer: 'TVK Public Grievance',
+    footer: 'TVK Mylapore Grievance',
     ctaLabel,
     ctaUrl: action.url,
   });
@@ -411,7 +411,7 @@ async function sendDetailsThenUrlConfirmation(
     headerImageUrl: banner || undefined,
     headerText: !banner ? optionTitle : undefined,
     body,
-    footer: 'TVK Public Grievance',
+    footer: 'TVK Mylapore Grievance',
     ctaLabel: action.ctaLabel || 'Open Portal',
     ctaUrl: action.url,
   });
@@ -500,7 +500,7 @@ async function sendWelcomeFlowSafe(phone, { body, banner } = {}) {
       flowId,
       flowCta: 'Choose Service',
       headerImageUrl: headerImageUrl || undefined,
-      headerText: !headerImageUrl ? 'TVK Public Grievance' : undefined,
+      headerText: !headerImageUrl ? 'TVK Mylapore Grievance' : undefined,
       bodyText:
         body ||
         'Vanakkam 🙏\n\nTap *Choose Service* below to raise a grievance.',

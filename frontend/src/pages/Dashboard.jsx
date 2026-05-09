@@ -56,29 +56,29 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-end justify-between flex-wrap gap-3">
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex items-end justify-between flex-wrap gap-4 bg-white/50 p-6 rounded-2xl border border-gray-100 shadow-sm backdrop-blur-sm">
         <div>
-          <h1 className="text-2xl font-bold text-brand-900">Dashboard</h1>
-          <p className="text-sm text-gray-600">Overview of grievance activity & WhatsApp campaigns.</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="text-sm font-medium text-gray-500 mt-1">Overview of grievance activity & WhatsApp campaigns.</p>
         </div>
-        <button onClick={() => api.post('/campaigns/sync').then(load)} className="btn-secondary !text-xs">
-          Sync template status
+        <button onClick={() => api.post('/campaigns/sync').then(load)} className="btn-secondary">
+          Sync Template Status
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map(({ key, label, icon: Icon, to, color }) => (
-          <Link key={key} to={to} className="card p-5 hover:shadow-md transition">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        {cards.map(({ key, label, icon: Icon, to, color }, idx) => (
+          <Link key={key} to={to} className="card p-6 group hover:-translate-y-1" style={{ animationDelay: `${idx * 100}ms` }}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-gray-500">{label}</div>
-                <div className="text-3xl font-bold text-brand-900 mt-1">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</div>
+                <div className="text-4xl font-extrabold text-gray-900 mt-2">
                   {loading ? '…' : data.stats[key] ?? 0}
                 </div>
               </div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-                <Icon size={22} />
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-white to-gray-50 shadow-sm border border-gray-100 transition-transform group-hover:scale-110 ${color}`}>
+                <Icon size={26} />
               </div>
             </div>
           </Link>
@@ -86,10 +86,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card lg:col-span-2">
-          <div className="px-5 py-4 border-b border-gray-100 font-semibold text-brand-800 flex items-center justify-between">
-            <span>Requests by Service</span>
-            <Link to="/service-requests" className="text-xs text-brand-700 hover:underline">View all</Link>
+        <div className="card lg:col-span-2 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100/50 bg-gray-50/30 flex items-center justify-between">
+            <span className="font-bold text-gray-800 tracking-tight">Requests by Service</span>
+            <Link to="/service-requests" className="text-xs font-semibold text-brand-600 hover:text-brand-800 transition">View all &rarr;</Link>
           </div>
           <ul className="divide-y divide-gray-100">
             {data.byService.map((s) => (
@@ -104,10 +104,10 @@ export default function Dashboard() {
           </ul>
         </div>
 
-        <div className="card">
-          <div className="px-5 py-4 border-b border-gray-100 font-semibold text-brand-800 flex items-center justify-between">
-            <span><Megaphone size={14} className="inline mr-1" /> Campaigns</span>
-            <Link to="/campaigns" className="text-xs text-brand-700 hover:underline">Manage</Link>
+        <div className="card overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100/50 bg-gray-50/30 flex items-center justify-between">
+            <span className="font-bold text-gray-800 tracking-tight flex items-center gap-2"><Megaphone size={16} className="text-brand-500" /> Campaigns</span>
+            <Link to="/campaigns" className="text-xs font-semibold text-brand-600 hover:text-brand-800 transition">Manage &rarr;</Link>
           </div>
           <ul className="divide-y divide-gray-100">
             {data.recentCampaigns.map((c) => (
@@ -131,8 +131,8 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <div className="px-5 py-4 border-b border-gray-100 font-semibold text-brand-800">Recent Service Requests</div>
+        <div className="card overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100/50 bg-gray-50/30 font-bold text-gray-800 tracking-tight">Recent Service Requests</div>
           {!data.recentRequests?.length ? (
             <div className="p-6 text-sm text-gray-500 text-center">No requests yet.</div>
           ) : (
@@ -153,8 +153,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="card">
-          <div className="px-5 py-4 border-b border-gray-100 font-semibold text-brand-800">Recent Members</div>
+        <div className="card overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100/50 bg-gray-50/30 font-bold text-gray-800 tracking-tight">Recent Members</div>
           {!data.recentMembers?.length ? (
             <div className="p-6 text-sm text-gray-500 text-center">No members yet.</div>
           ) : (

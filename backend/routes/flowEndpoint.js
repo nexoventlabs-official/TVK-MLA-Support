@@ -750,7 +750,7 @@ function regDoneScreen(name) {
       info_title: '🙏 Registration Complete',
       info_body:
         `Thank you${greet}!\n\n` +
-        'You are now registered with TVK Public Grievance.\n' +
+        'You are now registered with TVK Mylapore Legislative Assembly Grievance Service.\n' +
         'Type *hi* anytime to raise a service request.',
     },
   };

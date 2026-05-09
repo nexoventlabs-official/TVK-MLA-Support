@@ -57,9 +57,9 @@ async function sendWelcomeFlow(phone) {
     flowId,
     flowCta: 'Choose Service',
     headerImageUrl: banner || undefined,
-    headerText: !banner ? 'TVK Public Grievance' : undefined,
+    headerText: !banner ? 'TVK Mylapore Grievance' : undefined,
     bodyText:
-      'Vanakkam 🙏\n\nWelcome to *TVK Public Grievance Service*. Tap *Choose Service* below to raise a grievance for Civic Works, Revenue, Health, Education, Ration, Agriculture, Law & Order, Employment or Personal Assistance.',
+      'Vanakkam 🙏\n\nWelcome to *TVK Mylapore Legislative Assembly Grievance Service*. Tap *Choose Service* below to raise a grievance for Civic Works, Revenue, Health, Education, Ration, Agriculture, Law & Order, Employment or Personal Assistance.',
     footerText: 'TVK – Tamilaga Vettri Kazhagam',
     flowToken: `welcome_${phone}`,
     mode,
@@ -89,9 +89,9 @@ async function sendRegistrationFlow(phone) {
     flowId,
     flowCta: 'Register Now',
     headerImageUrl: banner || undefined,
-    headerText: !banner ? 'TVK Public Grievance' : undefined,
+    headerText: !banner ? 'TVK Mylapore Grievance' : undefined,
     bodyText:
-      'Vanakkam 🙏\n\nWelcome to *TVK Public Grievance Service*. Please register once with your *EPIC (Voter ID)* number to access our services. Tap *Register Now* below.',
+      'Vanakkam 🙏\n\nWelcome to *TVK Mylapore Legislative Assembly Grievance Service*. Please register once with your *EPIC (Voter ID)* number to access our services. Tap *Register Now* below.',
     footerText: 'TVK – Tamilaga Vettri Kazhagam',
     flowToken: `reg_${phone}`,
     mode,
