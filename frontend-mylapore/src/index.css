@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────
+   Mylapore Constituency Admin Console — base styles
+
+   Design language: formal, print-feel, navy + gold. The body uses a
+   subtle warm parchment ("ivory") background so plain white cards pop
+   as official stationery. Scrollbars and focus rings match the brand
+   palette to keep the whole surface cohesive.
+   ───────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  background: #fbfaf6; /* ivory-50 */
+  color: #0e1f3d; /* brand-900 */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Give formal screen titles the newspaper-like gravitas of a serif. */
+.gov-heading {
+  font-family: 'Playfair Display', Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* A very subtle paper-grain texture on top of the ivory body. Pure CSS
+   (no image asset) — stacked repeating gradients that fade in and out
+   to fake a linen grain. Kept at ~3% opacity so it's barely perceptible
+   but adds warmth when the user stares at the screen all day. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(14, 31, 61, 0.03) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(14, 31, 61, 0.02) 0 1px, transparent 1px 3px);
+  opacity: 0.5;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200;
+  }
+  .btn-primary {
+    @apply btn bg-brand-800 text-white hover:bg-brand-700 hover:shadow-brand-glow active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-brand-800 border border-brand-200 hover:border-brand-400 hover:bg-brand-50 active:scale-[0.98];
+  }
+  .btn-danger {
+    @apply btn bg-red-700 text-white hover:bg-red-800 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .input {
+    @apply w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-600 text-sm transition-all duration-200 placeholder:text-gray-400;
+  }
+  .label {
+    @apply block text-[11px] font-bold tracking-[0.12em] text-brand-700 mb-1.5 uppercase;
+  }
+  /* Cards read as official paper — crisp white, subtle shadow, navy
+     accent corner via the border-l utility where appropriate. */
+  .card {
+    @apply bg-white rounded-xl border border-gray-200/80 shadow-emboss transition-all duration-200;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wide uppercase;
+  }
+  /* Accent rule used under page titles, reminiscent of a government
+     letterhead's gold underline. */
+  .gold-rule {
+    @apply block h-[3px] w-16 rounded-full bg-gradient-to-r from-accent-400 via-accent-500 to-accent-400;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #1d3f75; /* brand-700 */
+  border-radius: 8px;
+  border: 2px solid #fbfaf6; /* breathing room on the ivory bg */
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Selection color matches the gold accent, so copy-paste feels branded. */
+::selection {
+  background: #f3dc87; /* accent-200 */
+  color: #0e1f3d;
+}

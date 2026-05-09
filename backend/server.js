@@ -113,6 +113,19 @@ async function start() {
       await Admin.create({ username, passwordHash });
       console.log(`[Seed] Default admin created: ${username}`);
     }
+
+    // Idempotently seed the Mylapore admin used by the constituency-level
+    // admin panel (frontend-mylapore). Safe to run on every boot — we only
+    // create the user if it doesn't already exist, never overwriting an
+    // existing password.
+    const mylaporeUsername = process.env.MYLAPORE_ADMIN_USERNAME || 'Mylapore';
+    const mylaporePassword = process.env.MYLAPORE_ADMIN_PASSWORD || 'admin';
+    const existingMylapore = await Admin.findOne({ username: mylaporeUsername });
+    if (!existingMylapore) {
+      const passwordHash = await bcrypt.hash(mylaporePassword, 10);
+      await Admin.create({ username: mylaporeUsername, passwordHash });
+      console.log(`[Seed] Mylapore admin created: ${mylaporeUsername}`);
+    }
   } catch (err) {
     console.warn('[Seed] admin seed skipped:', err.message);
   }
