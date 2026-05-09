@@ -21,6 +21,7 @@ const SOCIAL_KEYS = [
   { key: 'icon_social_instagram', label: 'Social icon: Instagram', group: 'social' },
   { key: 'icon_social_youtube',   label: 'Social icon: YouTube',   group: 'social' },
   { key: 'icon_social_twitter',   label: 'Social icon: Twitter / X', group: 'social' },
+  { key: 'icon_social_mail',      label: 'Social icon: Email / Mail', group: 'social' },
 ];
 
 const CTA_HEADER_KEYS = [

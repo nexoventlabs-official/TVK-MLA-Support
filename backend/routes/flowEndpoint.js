@@ -304,6 +304,7 @@ function buildSocialList(images) {
     { id: 'instagram', iconKey: 'icon_social_instagram', title: 'Instagram',     description: 'Official Instagram handle' },
     { id: 'youtube',   iconKey: 'icon_social_youtube',   title: 'YouTube',       description: 'Official YouTube channel' },
     { id: 'twitter',   iconKey: 'icon_social_twitter',   title: 'X (Twitter)',   description: 'Official X handle' },
+    { id: 'mail',      iconKey: 'icon_social_mail',      title: 'Email',         description: 'Write to TVK MLA Office' },
   ].map((p) =>
     withImage({ id: p.id, title: p.title, description: p.description }, images[p.iconKey])
   );

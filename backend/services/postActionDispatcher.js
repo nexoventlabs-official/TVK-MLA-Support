@@ -42,6 +42,10 @@ const SOCIAL_LINKS = {
   instagram: process.env.SOCIAL_INSTAGRAM || 'https://www.instagram.com/tvkofficial/',
   youtube: process.env.SOCIAL_YOUTUBE || 'https://www.youtube.com/@TVKOfficial',
   twitter: process.env.SOCIAL_TWITTER || 'https://x.com/TVK_Official',
+  // Plain email address — WhatsApp auto-detects emails in message text and
+  // makes them tappable to open the user's mail composer. CTA URL buttons
+  // can't carry mailto: so we expose the address inline instead.
+  mail: process.env.SOCIAL_MAIL || process.env.MLA_OFFICE_EMAIL || 'office@tvk.example',
 };
 
 /* ─────────────────────────── decode helper ─────────────────────────── */
@@ -194,6 +198,16 @@ const SOCIAL_PLATFORMS = {
     emoji: '🐦',
     ctaLabel: 'Open X (Twitter)',
   },
+  // Mail is a special case — `url` holds the bare email address (not a
+  // URL). sendSocialPlatform branches on platform === 'mail' and renders
+  // an image+text message instead of a CTA URL button.
+  mail: {
+    url: SOCIAL_LINKS.mail,
+    iconKey: 'icon_social_mail',
+    title: 'Email',
+    emoji: '📧',
+    ctaLabel: 'Email TVK',
+  },
 };
 
 /**
@@ -203,9 +217,31 @@ const SOCIAL_PLATFORMS = {
  * cached on Meta) or the platform is unknown.
  */
 async function sendSocialPlatform(phone, { platform } = {}) {
-  const spec = SOCIAL_PLATFORMS[String(platform || '').trim().toLowerCase()];
+  const key = String(platform || '').trim().toLowerCase();
+  const spec = SOCIAL_PLATFORMS[key];
   if (!spec || !spec.url) return sendSocialMediaLegacy(phone);
+
   const banner = await flowImages.getUrl(spec.iconKey);
+
+  // Mail is special: WhatsApp's CTA URL button can't open mailto: links,
+  // so we send an image+body message with the email shown inline. Most
+  // WhatsApp clients auto-detect emails in message text and make them
+  // tappable to open the user's mail composer.
+  if (key === 'mail') {
+    const body =
+      `${spec.emoji} *Email TVK*\n\n` +
+      `Tap the address below to write to us:\n` +
+      `${spec.url}`;
+    if (banner) {
+      await meta.sendImage(phone, banner, body).catch(async () => {
+        await meta.sendText(phone, body).catch(() => {});
+      });
+    } else {
+      await meta.sendText(phone, body).catch(() => {});
+    }
+    return;
+  }
+
   const body =
     `${spec.emoji} *Follow TVK on ${spec.title}*\n\n` +
     `Tap *${spec.ctaLabel}* below to open our official ${spec.title} page.`;
@@ -261,13 +297,22 @@ async function sendUrlCta(phone, { serviceId, optionId, optionTitle }) {
   });
 }
 
+/**
+ * Hand the user the requested form as a SINGLE chat bubble:
+ *   - Document header  → the PDF itself (tap to download / preview)
+ *   - Body             → form title + short instruction + Choose Service hint
+ *   - Footer + CTA     → green 'Choose Service' button that re-opens the
+ *                        grievance welcome flow
+ *
+ * This collapses what used to be 3 messages (banner image, document,
+ * follow-up welcome flow) into one cohesive card.
+ */
 async function sendPdf(phone, { serviceId, optionId, optionTitle }) {
   const action = getAction(serviceId, optionId);
   if (!action || action.kind !== 'pdf') {
     await meta.sendText(phone, 'Sorry — the document you requested is not available.');
     return;
   }
-  const banner = await flowImages.getUrl(action.headerKey);
   const pdfUrl = await flowImages.getUrl(action.pdfKey);
   if (!pdfUrl) {
     await meta.sendText(
@@ -276,16 +321,56 @@ async function sendPdf(phone, { serviceId, optionId, optionTitle }) {
     );
     return;
   }
-  if (banner) {
-    await meta.sendImage(phone, banner, `*${optionTitle}*\n\nThe form is attached below.`).catch(() => {});
+
+  const flowId = process.env.WHATSAPP_FLOW_ID;
+  const body =
+    `*${optionTitle}*\n\n` +
+    `Please fill the form attached above and submit it at your nearest office.\n\n` +
+    `Tap *Choose Service* below to raise another grievance.`;
+
+  // No flow configured → fall back to a plain document so the user still
+  // gets the form. They can type *hi* to re-open the menu.
+  if (!flowId) {
+    await meta.sendDocument(phone, {
+      url: pdfUrl,
+      filename: `${optionId}.pdf`,
+      caption: `${optionTitle} — please fill and submit at your nearest office.`,
+    });
+    return;
   }
-  await meta.sendDocument(phone, {
-    url: pdfUrl,
-    filename: `${optionId}.pdf`,
-    caption: `${optionTitle} — please fill and submit at your nearest office.`,
-  });
-  // Re-launch the welcome flow so the user can pick another option.
-  await sendWelcomeFlowSafe(phone);
+
+  const mode =
+    String(process.env.WHATSAPP_FLOW_STATUS || '').toUpperCase() === 'PUBLISHED'
+      ? 'published'
+      : 'draft';
+
+  try {
+    await meta.sendFlowMessage(phone, {
+      flowId,
+      flowCta: 'Choose Service',
+      headerDocumentUrl: pdfUrl,
+      headerDocumentFilename: `${optionId}.pdf`,
+      bodyText: body,
+      footerText: 'TVK – Tamilaga Vettri Kazhagam',
+      flowToken: `welcome_${phone}`,
+      mode,
+    });
+  } catch (err) {
+    console.error(
+      '[postActionDispatcher] sendPdf flow message failed, falling back to document + welcome flow:',
+      err.response?.data || err.message
+    );
+    // Fallback path: send the document and the welcome flow as two
+    // separate messages so the user still gets both.
+    await meta
+      .sendDocument(phone, {
+        url: pdfUrl,
+        filename: `${optionId}.pdf`,
+        caption: `${optionTitle} — please fill and submit at your nearest office.`,
+      })
+      .catch(() => {});
+    await sendWelcomeFlowSafe(phone).catch(() => {});
+  }
 }
 
 async function sendTicketConfirmation(phone, { ticketId, serviceTitle, optionTitle, serviceId, optionId }) {

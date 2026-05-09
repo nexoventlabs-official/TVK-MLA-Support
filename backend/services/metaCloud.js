@@ -205,6 +205,8 @@ async function sendFlowMessage(to, options) {
     flowId,
     flowCta,
     headerImageUrl,
+    headerDocumentUrl,
+    headerDocumentFilename,
     headerText,
     bodyText,
     footerText,
@@ -217,8 +219,19 @@ async function sendFlowMessage(to, options) {
     data: seedData,
   } = options;
 
+  // Document headers let an interactive flow message double as the PDF
+  // delivery — used by sendPdf to combine the form download and the
+  // 'Choose Service' CTA into a single chat bubble.
   let header;
-  if (headerImageUrl) {
+  if (headerDocumentUrl) {
+    header = {
+      type: 'document',
+      document: {
+        link: headerDocumentUrl,
+        filename: headerDocumentFilename || 'document.pdf',
+      },
+    };
+  } else if (headerImageUrl) {
     header = { type: 'image', image: { link: headerImageUrl } };
   } else if (headerText) {
     header = { type: 'text', text: headerText };
