@@ -136,6 +136,22 @@ async function handleFlowComplete({ phone, flowToken }) {
 async function handleInbound({ phone, profileName, type, text }) {
   await trackInbound({ phone, profileName, text });
 
+  // If the user is in the middle of a state machine (e.g. uploading the
+  // 3 photos for a location_photos_ticket) any "empty text" inbound
+  // — which is what WhatsApp delivers for stickers / videos / documents,
+  // or a webhook quirk on photo albums — must NOT relaunch the welcome
+  // flow. The pending-action handlers already replied to the legitimate
+  // message types (location / image / text) so we just stay quiet here.
+  try {
+    const pending = await Member.findOne(
+      { phone, 'pendingAction.kind': { $exists: true, $ne: null } },
+      { _id: 1 }
+    ).lean();
+    if (pending) return;
+  } catch (err) {
+    console.warn('[chatbot] pendingAction check failed:', err.message);
+  }
+
   if (isGreeting(text) || !text) {
     let registered = false;
     try {
