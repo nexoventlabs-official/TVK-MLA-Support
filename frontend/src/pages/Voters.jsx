@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Phone,
@@ -16,6 +16,7 @@ import api from '../api';
 const PAGE_SIZE = 50;
 
 export default function Voters() {
+  const nav = useNavigate();
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -133,7 +134,7 @@ export default function Voters() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+              <thead className="bg-brand-50 text-brand-500 text-[11px] font-semibold tracking-wide uppercase border-b border-brand-200/70">
                 <tr>
                   <th className="px-4 py-3 text-left">Voter</th>
                   <th className="px-4 py-3 text-left">EPIC</th>
@@ -142,66 +143,66 @@ export default function Voters() {
                   <th className="px-4 py-3 text-left">House</th>
                   <th className="px-4 py-3 text-left">Mobile</th>
                   <th className="px-4 py-3 text-left">Assembly</th>
-                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-brand-100">
                 {items.map((v) => {
                   const name = v.name || '—';
+                  // Whole row is clickable. Using onClick on <tr> rather
+                  // than wrapping cells in <Link> because anchors can't
+                  // legally contain table cells.
                   return (
-                    <tr key={v._id} className="hover:bg-gray-50">
+                    <tr
+                      key={v._id}
+                      onClick={() => nav(`/voters/${v._id}`)}
+                      className="cursor-pointer hover:bg-brand-50 transition-colors group"
+                    >
                       <td className="px-4 py-3">
-                        <Link to={`/voters/${v._id}`} className="flex items-center gap-3 group">
-                          <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-medium">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-800 flex items-center justify-center font-semibold text-sm">
                             {name[0]?.toUpperCase()}
                           </div>
-                          <div className="font-medium group-hover:text-brand-700">{name}</div>
-                        </Link>
+                          <div className="font-medium text-brand-900 group-hover:text-black">
+                            {name}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 text-gray-700 font-mono text-xs">
+                        <span className="inline-flex items-center gap-1 text-brand-700 font-mono text-xs tabular">
                           <IdCard size={14} /> {v.epicNo || '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-700">
+                      <td className="px-4 py-3 whitespace-nowrap text-brand-700">
                         {v.relationName ? (
                           <span>
-                            <span className="text-gray-400">{v.relationType || ''}</span>{' '}
+                            <span className="text-brand-400">{v.relationType || ''}</span>{' '}
                             {v.relationName}
                           </span>
                         ) : (
                           '—'
                         )}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-700">
+                      <td className="px-4 py-3 whitespace-nowrap text-brand-700">
                         {v.gender || '—'}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-700">
+                      <td className="px-4 py-3 whitespace-nowrap text-brand-700">
                         {v.houseNo || '—'}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-700">
+                      <td className="px-4 py-3 whitespace-nowrap text-brand-700">
                         {v.mobile ? (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 tabular">
                             <Phone size={14} /> {v.mobile}
                           </span>
                         ) : (
                           '—'
                         )}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                      <td className="px-4 py-3 whitespace-nowrap text-brand-600">
                         <span className="inline-flex items-center gap-1">
                           <MapPin size={14} />
                           {v.assemblyName || v.sourceCollection || '—'}
                           {v.assemblyNo ? ` (${v.assemblyNo})` : ''}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          to={`/voters/${v._id}`}
-                          className="text-brand-700 hover:bg-brand-50 p-2 rounded-md inline-flex"
-                        >
-                          <ChevronRight size={16} />
-                        </Link>
                       </td>
                     </tr>
                   );

@@ -41,7 +41,7 @@ export default function Login({ setAuth }) {
   return (
     <div className="min-h-screen flex bg-white animate-fade-in">
       {/* ─── Left: black brand panel ─── */}
-      <div className="relative hidden md:flex md:w-[45%] lg:w-[48%] flex-col bg-brand-950 text-white overflow-hidden">
+      <div className="relative hidden md:flex md:w-[45%] lg:w-[48%] flex-col bg-black text-white overflow-hidden">
         {/* Dot lattice — pure CSS, very subtle. */}
         <div
           className="absolute inset-0 opacity-[0.06]"
@@ -96,7 +96,7 @@ export default function Login({ setAuth }) {
       <div className="w-full md:w-[55%] lg:w-[52%] flex items-center justify-center px-6 sm:px-12 py-12 relative">
         {/* Mobile mini-header so users on phones still see the brand. */}
         <div className="md:hidden absolute top-0 inset-x-0 px-5 py-4 flex items-center gap-3 border-b border-brand-200">
-          <div className="w-8 h-8 rounded-md bg-brand-950 overflow-hidden">
+          <div className="w-8 h-8 rounded-md bg-black overflow-hidden">
             <img src="/mla.png" alt="TVK" className="w-full h-full object-cover" />
           </div>
           <div className="leading-tight">

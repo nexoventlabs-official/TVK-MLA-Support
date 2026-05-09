@@ -46,7 +46,7 @@ body {
   }
   .btn-primary {
     @apply btn bg-brand-900 text-white border border-brand-900
-           hover:bg-brand-950 hover:border-brand-950
+           hover:bg-black hover:border-black
            focus:outline-none focus:ring-2 focus:ring-brand-900/20 focus:ring-offset-1 focus:ring-offset-white
            active:scale-[0.98]
            disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand-900;

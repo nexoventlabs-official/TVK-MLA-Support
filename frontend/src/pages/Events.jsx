@@ -186,7 +186,7 @@ export default function Events() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-30 bg-brand-950/40 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
           <form
             onSubmit={submit}
             className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4 shadow-elevated border border-brand-200"
