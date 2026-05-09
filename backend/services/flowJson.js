@@ -391,17 +391,15 @@ function buildFlowJSON() {
       },
 
       // ─── OPTION_SELECT ────────────────────────────────────────────────
-      // Terminal screen: Continue closes the flow with `post_action:
-      // 'option_select'` carrying the chosen `service_id` + `selected_option`.
-      // The webhook then dispatches via issueActions:
-      //   • url / pdf / contact_mla / helplines / location_*  → message
-      //   • ticket / details_then_url                         → fresh sub-flow
-      //                                                          opening at DETAILS
+      // Continue fires a `data_exchange`. The server decides what happens:
+      //   • ticket / details_then_url → return DETAILS (in-flow navigation,
+      //                                  no second flow card needed)
+      //   • url / pdf / contact_mla / helplines / location_* → return the
+      //     SUCCESS screen which closes the flow immediately and triggers
+      //     the post-action dispatcher (no redundant "Tap Close" prompt).
       {
         id: 'OPTION_SELECT',
         title: 'Choose Issue',
-        terminal: true,
-        success: true,
         data: {
           option_banner: { type: 'string', __example__: 'iVBORw0KGgo' },
           has_option_banner: { type: 'boolean', __example__: false },
@@ -448,9 +446,9 @@ function buildFlowJSON() {
               type: 'Footer',
               label: 'Continue',
               'on-click-action': {
-                name: 'complete',
+                name: 'data_exchange',
                 payload: {
-                  post_action: 'option_select',
+                  action: 'option_pick',
                   service_id: '${data.service_id}',
                   selected_option: '${form.selected_option}',
                 },

@@ -538,11 +538,56 @@ async function handleDataExchange({ screen, data, flow_token }) {
     };
   }
 
-  // OPTION_SELECT is now a TERMINAL screen — it never round-trips here.
-  // The webhook receives a `complete` payload with post_action='option_select'
-  // and dispatches via `dispatchOptionSelect()` in postActionDispatcher.js
-  // (direct senders for url/pdf/location/contact_mla, fresh sub-flow card
-  // pointing at DETAILS for ticket / details_then_url issues).
+  // ─── OPTION_SELECT → DETAILS / SUCCESS-close ─────────────────────────
+  // Continue from the issue list lands here. We look up the action and:
+  //   • ticket / details_then_url → navigate IN-FLOW to DETAILS with the
+  //     service / option pre-seeded (no extra "Open Form" card).
+  //   • url / pdf / contact_mla / helplines / location_* → return the
+  //     SUCCESS screen so WhatsApp closes the flow immediately and the
+  //     webhook dispatcher fires the matching follow-up message.
+  if (screen === 'OPTION_SELECT') {
+    const sid = String(data?.service_id || '').trim();
+    const oid = String(data?.selected_option || '').trim();
+    const svc = getServiceById(sid);
+    const opt = getOption(sid, oid);
+    if (!svc || !opt) {
+      return infoScreen({
+        title: 'Issue not found',
+        body: 'Please tap Close and type *hi* to choose again.',
+      });
+    }
+    const action = getAction(svc.id, opt.id);
+    const kind = action?.kind || '';
+
+    // ticket / details_then_url → in-flow DETAILS with seeded data.
+    if (kind === 'ticket' || kind === 'details_then_url') {
+      const member = phone ? await Member.findOne({ phone }).lean() : null;
+      return {
+        screen: 'DETAILS',
+        data: {
+          service_id: svc.id,
+          option_id: opt.id,
+          service_title: svc.title,
+          option_title: opt.title,
+          init_phone: phone || '',
+          init_name: member?.name || member?.profileName || '',
+          show_school_name: opt.id === 'mid_day_meal_issue',
+          school_label: 'School name',
+        },
+      };
+    }
+
+    // Everything else closes the flow immediately and is handled by the
+    // post-action dispatcher. We re-use post_action='option_select' with
+    // the chosen service/option as top-level params so the dispatcher's
+    // dispatchOptionSelect() picks them up.
+    return successScreen({
+      flow_token,
+      post_action: 'option_select',
+      service_id: svc.id,
+      selected_option: opt.id,
+    });
+  }
 
   // ─── DETAILS → submit (creates a ticketed request, then closes the flow with
   //   a post_action so the webhook can fire the confirmation message — and,
