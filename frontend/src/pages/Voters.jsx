@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronsLeft,
   ChevronsRight,
-  MapPin,
   Users as UsersIcon,
 } from 'lucide-react';
 import api from '../api';
@@ -142,7 +141,6 @@ export default function Voters() {
                   <th className="px-4 py-3 text-left">Gender</th>
                   <th className="px-4 py-3 text-left">House</th>
                   <th className="px-4 py-3 text-left">Mobile</th>
-                  <th className="px-4 py-3 text-left">Assembly</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-100">
@@ -196,13 +194,6 @@ export default function Voters() {
                         ) : (
                           '—'
                         )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-brand-600">
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin size={14} />
-                          {v.assemblyName || v.sourceCollection || '—'}
-                          {v.assemblyNo ? ` (${v.assemblyNo})` : ''}
-                        </span>
                       </td>
                     </tr>
                   );
