@@ -12,11 +12,11 @@ const STATUS_LABELS = {
   rejected: 'Rejected',
 };
 const STATUS_COLORS = {
-  pending: 'bg-amber-100 text-amber-700',
-  accepted: 'bg-sky-100 text-sky-700',
-  processing: 'bg-blue-100 text-blue-700',
-  completed: 'bg-green-100 text-green-700',
-  rejected: 'bg-gray-200 text-gray-700',
+  pending: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/60',
+  accepted: 'bg-sky-50 text-sky-700 ring-1 ring-sky-200/60',
+  processing: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/60',
+  completed: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60',
+  rejected: 'bg-brand-100 text-brand-600 ring-1 ring-brand-200',
 };
 
 export default function ServiceRequests() {
@@ -74,11 +74,14 @@ export default function ServiceRequests() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-white/50 p-6 rounded-2xl border border-gray-100 shadow-sm backdrop-blur-sm">
+    <div className="space-y-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Service Requests</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">
+          <div className="text-[10px] font-semibold tracking-[0.22em] uppercase text-brand-400 mb-2">
+            Operations
+          </div>
+          <h1 className="page-title">Service Requests</h1>
+          <p className="page-subtitle tabular">
             {items.length} {STATUS_LABELS[statusFilter] || 'total'} grievances submitted via WhatsApp.
           </p>
         </div>
@@ -93,14 +96,16 @@ export default function ServiceRequests() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search ticket / phone / description"
-            className="input !py-1.5 w-64"
+            className="input w-64"
           />
-          <button type="submit" className="btn-secondary !py-1.5 !text-xs">
+          <button type="submit" className="btn-secondary">
             Search
           </button>
-          <Filter size={16} className="text-gray-400 ml-2" />
+          <span className="inline-flex items-center gap-1 ml-2 text-brand-400">
+            <Filter size={14} />
+          </span>
           <select
-            className="input !py-1.5 !w-auto"
+            className="input !w-auto"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -112,7 +117,7 @@ export default function ServiceRequests() {
             ))}
           </select>
           <select
-            className="input !py-1.5 !w-auto"
+            className="input !w-auto"
             value={serviceFilter}
             onChange={(e) => setServiceFilter(e.target.value)}
           >
@@ -127,28 +132,28 @@ export default function ServiceRequests() {
       </div>
 
       {loading ? (
-        <div className="card p-8 text-center text-gray-500">Loading…</div>
+        <div className="card p-10 text-center text-brand-400">Loading…</div>
       ) : items.length === 0 ? (
-        <div className="card p-10 text-center text-gray-500">No requests.</div>
+        <div className="card p-12 text-center text-brand-400">No requests.</div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {items.map((r) => {
             const mapUrl = r.geo?.latitude && r.geo?.longitude
               ? `https://www.google.com/maps?q=${r.geo.latitude},${r.geo.longitude}`
               : null;
             return (
-              <div key={r._id} className="card p-5 group hover:-translate-y-0.5 transition-transform duration-300">
+              <div key={r._id} className="card-hover p-5">
                 <div className="flex items-start justify-between flex-wrap gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       {r.ticketId && (
-                        <span className="pill bg-brand-900 text-white font-mono">
-                          <Ticket size={12} /> {r.ticketId}
+                        <span className="pill bg-brand-900 text-white font-mono ring-1 ring-brand-900">
+                          <Ticket size={11} /> {r.ticketId}
                         </span>
                       )}
-                      <div className="font-semibold text-brand-900">{r.optionTitle}</div>
-                      <span className="pill bg-brand-50 text-brand-700">{r.serviceTitle}</span>
-                      <span className={`pill ${STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-700'}`}>
+                      <div className="font-semibold text-brand-900 text-[14px]">{r.optionTitle}</div>
+                      <span className="pill bg-brand-50 text-brand-700 ring-1 ring-brand-200">{r.serviceTitle}</span>
+                      <span className={`pill ${STATUS_COLORS[r.status] || STATUS_COLORS.rejected}`}>
                         {STATUS_LABELS[r.status] || r.status}
                       </span>
                     </div>
@@ -202,9 +207,9 @@ export default function ServiceRequests() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-xl border border-gray-100/50">
+                  <div className="flex items-center gap-2">
                     <select
-                      className="input !py-2 !w-auto bg-white shadow-sm"
+                      className="input !w-auto !py-1.5"
                       value={r.status}
                       onChange={(ev) => updateStatus(r._id, ev.target.value)}
                     >
@@ -214,18 +219,22 @@ export default function ServiceRequests() {
                         </option>
                       ))}
                     </select>
-                    <button onClick={() => remove(r._id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2.5 rounded-lg transition-colors shadow-sm bg-white border border-red-100">
-                      <Trash2 size={18} />
+                    <button
+                      onClick={() => remove(r._id)}
+                      className="p-2 rounded-md text-brand-400 hover:text-red-700 hover:bg-red-50 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-100/50">
+                <div className="mt-4 pt-4 border-t border-brand-100">
                   <textarea
                     rows={2}
                     placeholder="Add internal notes here…"
                     defaultValue={r.notes || ''}
                     onBlur={(ev) => updateNotes(r._id, ev.target.value)}
-                    className="input w-full text-sm bg-gray-50/50 hover:bg-white focus:bg-white transition-colors placeholder:text-gray-400"
+                    className="input w-full text-sm bg-brand-50/60 hover:bg-white focus:bg-white"
                   />
                 </div>
               </div>

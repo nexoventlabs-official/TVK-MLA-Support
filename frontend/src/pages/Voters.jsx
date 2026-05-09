@@ -84,11 +84,14 @@ export default function Voters() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold text-brand-900">Voters</h1>
-          <p className="text-sm text-gray-600">
+          <div className="text-[10px] font-semibold tracking-[0.22em] uppercase text-brand-400 mb-2">
+            Operations
+          </div>
+          <h1 className="page-title">Voters</h1>
+          <p className="page-subtitle tabular">
             Showing {fmtRange()} from voter roll
             {assembly ? ` · ${assembly}` : collections.length > 1 ? ` · ${collections.length} assemblies` : ''}
           </p>

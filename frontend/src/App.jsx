@@ -32,8 +32,13 @@ function App() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-pulse text-brand-700">Loading…</div>
+      <div className="h-screen flex items-center justify-center bg-brand-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-9 h-9 rounded-full border-2 border-brand-200 border-t-brand-900 animate-spin" />
+          <div className="text-[10px] font-semibold tracking-[0.22em] uppercase text-brand-500">
+            Loading Console
+          </div>
+        </div>
       </div>
     );
   }

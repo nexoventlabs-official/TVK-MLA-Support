@@ -6,13 +6,13 @@ import {
 import api from '../api';
 
 const STATUS_COLORS = {
-  PENDING: 'bg-amber-100 text-amber-700',
-  APPROVED: 'bg-green-100 text-green-700',
-  REJECTED: 'bg-red-100 text-red-700',
-  DRAFT: 'bg-gray-200 text-gray-700',
-  PAUSED: 'bg-gray-200 text-gray-700',
-  DISABLED: 'bg-gray-200 text-gray-700',
-  IN_APPEAL: 'bg-blue-100 text-blue-700',
+  PENDING: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/60',
+  APPROVED: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60',
+  REJECTED: 'bg-red-50 text-red-700 ring-1 ring-red-200/60',
+  DRAFT: 'bg-brand-100 text-brand-600 ring-1 ring-brand-200',
+  PAUSED: 'bg-brand-100 text-brand-600 ring-1 ring-brand-200',
+  DISABLED: 'bg-brand-100 text-brand-600 ring-1 ring-brand-200',
+  IN_APPEAL: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/60',
 };
 
 const blank = {
@@ -141,18 +141,21 @@ export default function Campaigns() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold text-brand-900">Campaigns</h1>
-          <p className="text-sm text-gray-600">Build WhatsApp templates, submit to Meta, and broadcast to all members.</p>
+          <div className="text-[10px] font-semibold tracking-[0.22em] uppercase text-brand-400 mb-2">
+            Content
+          </div>
+          <h1 className="page-title">Campaigns</h1>
+          <p className="page-subtitle">Build WhatsApp templates, submit to Meta, and broadcast to all members.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={sync} disabled={syncing} className="btn-secondary !py-1.5 !text-xs">
+          <button onClick={sync} disabled={syncing} className="btn-secondary">
             <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Sync status
           </button>
           <button onClick={() => { setForm(blank); setShowForm(true); }} className="btn-primary">
-            <Plus size={16} /> New Template
+            <Plus size={15} /> New Template
           </button>
         </div>
       </div>
@@ -185,7 +188,7 @@ export default function Campaigns() {
                 {c.buttons?.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1">
                     {c.buttons.map((b, i) => (
-                      <span key={i} className="pill bg-gray-100 text-gray-700">
+                      <span key={i} className="pill bg-brand-100 text-brand-700 ring-1 ring-brand-200">
                         {b.type === 'URL' && <LinkIcon size={11} />}
                         {b.type === 'PHONE_NUMBER' && <Phone size={11} />}
                         {b.type === 'QUICK_REPLY' && <Reply size={11} />}
@@ -272,10 +275,10 @@ export default function Campaigns() {
                       key={h}
                       type="button"
                       onClick={() => setForm({ ...form, headerType: h, mediaFile: null })}
-                      className={`px-2 py-2 rounded-lg border text-xs font-medium transition ${
+                      className={`px-2 py-2 rounded-md border text-xs font-medium transition ${
                         form.headerType === h
-                          ? 'bg-brand-600 text-white border-brand-600'
-                          : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                          ? 'bg-brand-900 text-white border-brand-900'
+                          : 'bg-white border-brand-200 text-brand-700 hover:bg-brand-50'
                       }`}
                     >
                       {h === 'NONE' && '—'}
@@ -359,8 +362,8 @@ export default function Campaigns() {
 
                 <div className="space-y-2">
                   {form.buttons.map((b, i) => (
-                    <div key={i} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
-                      <span className="pill bg-white border border-gray-200 text-gray-700">{b.type === 'PHONE_NUMBER' ? 'CALL' : b.type === 'URL' ? 'URL' : 'REPLY'}</span>
+                    <div key={i} className="flex items-center gap-2 bg-brand-50 p-2 rounded-md border border-brand-200/70">
+                      <span className="pill bg-white border border-brand-200 text-brand-700">{b.type === 'PHONE_NUMBER' ? 'CALL' : b.type === 'URL' ? 'URL' : 'REPLY'}</span>
                       <input
                         className="input !py-1 flex-1"
                         placeholder="Button text (max 25)"
@@ -392,7 +395,7 @@ export default function Campaigns() {
                 </div>
               </div>
 
-              <div className="text-xs text-gray-500 bg-amber-50 border border-amber-100 rounded-lg p-3">
+              <div className="text-xs text-brand-700 bg-amber-50 border border-amber-200/70 rounded-md p-3">
                 After creation the template is submitted to Meta and shows as <strong>PENDING</strong>. Approval typically takes a few minutes — once status is <strong>APPROVED</strong>, click <MessageSquare size={11} className="inline" /> Send to broadcast to all members.
               </div>
             </div>

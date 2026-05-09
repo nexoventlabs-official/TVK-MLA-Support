@@ -101,15 +101,15 @@ export default function FlowImages() {
         <button
           type="button"
           onClick={() => setOpenGroups({ ...openGroups, [gkey]: !open })}
-          className="w-full px-5 py-3 bg-brand-50 border-b border-brand-100 font-semibold text-brand-800 flex items-center justify-between"
+          className="w-full section-bar font-semibold text-brand-900 hover:bg-brand-100 transition-colors"
         >
-          <span>
-            {label}{' '}
-            <span className="text-xs text-brand-600 ml-2">
+          <span className="font-display tracking-tightest">
+            {label}
+            <span className="ml-2 text-[11px] font-medium text-brand-400 tabular">
               {group.length} slot{group.length === 1 ? '' : 's'}
             </span>
           </span>
-          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          {open ? <ChevronDown size={16} className="text-brand-500" /> : <ChevronRight size={16} className="text-brand-500" />}
         </button>
         {open && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
@@ -194,11 +194,16 @@ export default function FlowImages() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-brand-900">Flow Images</h1>
-        <p className="text-sm text-gray-600">
-          Upload banners, icons and PDF documents used by the WhatsApp chatbot and grievance flow. Changes go live within a few seconds (cache invalidates on upload, ~10 min otherwise).
-        </p>
+      <div className="page-header">
+        <div>
+          <div className="text-[10px] font-semibold tracking-[0.22em] uppercase text-brand-400 mb-2">
+            Content
+          </div>
+          <h1 className="page-title">Flow Images</h1>
+          <p className="page-subtitle max-w-2xl">
+            Upload banners, icons and PDF documents used by the WhatsApp chatbot and grievance flow. Changes go live within a few seconds (cache invalidates on upload, ~10 min otherwise).
+          </p>
+        </div>
       </div>
 
       {loading ? (

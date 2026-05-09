@@ -114,16 +114,19 @@ export default function Events() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold text-brand-900">Upcoming Events</h1>
-          <p className="text-sm text-gray-600">
+          <div className="text-[10px] font-semibold tracking-[0.22em] uppercase text-brand-400 mb-2">
+            Content
+          </div>
+          <h1 className="page-title">Upcoming Events</h1>
+          <p className="page-subtitle">
             {items.length} events. These appear under <em>Upcoming Events</em> in the WhatsApp grievance flow.
           </p>
         </div>
-        <button onClick={openCreate} className="btn-primary !text-sm">
-          <Plus size={16} /> New Event
+        <button onClick={openCreate} className="btn-primary">
+          <Plus size={15} /> New Event
         </button>
       </div>
 
@@ -149,8 +152,8 @@ export default function Events() {
                 <div className="p-4 flex-1 flex flex-col gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-brand-900 flex-1 min-w-0 truncate">{ev.title}</h3>
-                    {!ev.active && <span className="pill bg-gray-200 text-gray-700">Hidden</span>}
-                    {past && <span className="pill bg-amber-100 text-amber-700">Past</span>}
+                    {!ev.active && <span className="pill bg-brand-100 text-brand-600 ring-1 ring-brand-200">Hidden</span>}
+                    {past && <span className="pill bg-amber-50 text-amber-700 ring-1 ring-amber-200/60">Past</span>}
                   </div>
                   <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1">
@@ -183,10 +186,10 @@ export default function Events() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-30 bg-black/40 flex items-start justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-30 bg-brand-950/40 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
           <form
             onSubmit={submit}
-            className="bg-white rounded-xl w-full max-w-lg p-5 space-y-4 shadow-2xl"
+            className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4 shadow-elevated border border-brand-200"
           >
             <div className="flex items-start justify-between">
               <h2 className="text-lg font-bold text-brand-900">

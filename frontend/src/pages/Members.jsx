@@ -13,10 +13,10 @@ import {
 import api from '../api';
 
 const STATUS_COLORS = {
-  new: 'bg-amber-100 text-amber-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-green-100 text-green-700',
-  rejected: 'bg-gray-200 text-gray-700',
+  new: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/60',
+  in_progress: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/60',
+  resolved: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60',
+  rejected: 'bg-brand-100 text-brand-600 ring-1 ring-brand-200',
 };
 
 const FILTERS = [
@@ -59,25 +59,28 @@ export default function Members() {
   const totalIssues = members.reduce((sum, m) => sum + (m.requestCount || 0), 0);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-white/50 p-6 rounded-2xl border border-gray-100 shadow-sm backdrop-blur-sm">
+    <div className="space-y-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Members</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">
+          <div className="text-[10px] font-semibold tracking-[0.22em] uppercase text-brand-400 mb-2">
+            Operations
+          </div>
+          <h1 className="page-title">Members</h1>
+          <p className="page-subtitle tabular">
             {members.length} {filter === 'registered' ? 'registered' : 'contacts'} ·{' '}
             {totalIssues} issue{totalIssues === 1 ? '' : 's'} raised
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex bg-gray-100 rounded-lg p-1">
+          <div className="inline-flex bg-brand-100 rounded-md p-0.5 border border-brand-200/70">
             {FILTERS.map((f) => (
               <button
                 key={f.id}
                 onClick={() => switchFilter(f.id)}
-                className={`px-3 py-1.5 text-xs rounded-md font-medium transition ${
+                className={`px-3 py-1.5 text-xs rounded font-semibold tracking-wide transition ${
                   filter === f.id
-                    ? 'bg-white text-brand-700 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-brand-900 shadow-sheet'
+                    : 'text-brand-500 hover:text-brand-900'
                 }`}
               >
                 {f.label}
@@ -104,9 +107,9 @@ export default function Members() {
 
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-gray-500 font-medium">Loading members…</div>
+          <div className="p-12 text-center text-brand-400 font-medium">Loading members…</div>
         ) : members.length === 0 ? (
-          <div className="p-12 text-center text-gray-500 font-medium">
+          <div className="p-12 text-center text-brand-400 font-medium">
             {filter === 'registered'
               ? 'No registered members yet. Members who complete the WhatsApp registration flow will appear here.'
               : 'No contacts yet. As soon as someone messages the bot they will appear here.'}
@@ -157,15 +160,15 @@ export default function Members() {
                           <span
                             className={`pill inline-flex items-center gap-1 ${
                               m.registrationType === 'epic'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-amber-100 text-amber-700'
+                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60'
+                                : 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/60'
                             }`}
                           >
                             <ShieldCheck size={12} />{' '}
                             {m.registrationType === 'epic' ? 'EPIC' : 'Manual'}
                           </span>
                         ) : (
-                          <span className="pill bg-gray-100 text-gray-500 inline-flex items-center gap-1">
+                          <span className="pill bg-brand-100 text-brand-500 ring-1 ring-brand-200 inline-flex items-center gap-1">
                             <MessageCircle size={12} /> Guest
                           </span>
                         )}
@@ -196,7 +199,7 @@ export default function Members() {
                               {m.requestCount > (m.recentIssues || []).length && (
                                 <Link
                                   to={`/members/${m._id}`}
-                                  className="pill text-[11px] bg-brand-50 text-brand-700 hover:bg-brand-100"
+                                  className="pill text-[11px] bg-brand-50 text-brand-700 ring-1 ring-brand-200 hover:bg-brand-100"
                                 >
                                   +{m.requestCount - m.recentIssues.length} more
                                 </Link>

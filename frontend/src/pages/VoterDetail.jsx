@@ -17,10 +17,10 @@ import {
 import api from '../api';
 
 const STATUS_COLORS = {
-  new: 'bg-amber-100 text-amber-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-green-100 text-green-700',
-  rejected: 'bg-gray-200 text-gray-700',
+  new: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/60',
+  in_progress: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/60',
+  resolved: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60',
+  rejected: 'bg-brand-100 text-brand-600 ring-1 ring-brand-200',
 };
 
 function fmtDateTime(d) {
@@ -88,8 +88,8 @@ export default function VoterDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to="/voters" className="inline-flex items-center gap-1 text-sm text-brand-700 hover:underline">
-        <ArrowLeft size={14} /> Back to voters
+      <Link to="/voters" className="inline-flex items-center gap-1.5 text-[12px] font-semibold tracking-wide uppercase text-brand-500 hover:text-brand-900 transition">
+        <ArrowLeft size={13} /> Back to voters
       </Link>
 
       <div className="card p-6">
@@ -101,11 +101,11 @@ export default function VoterDetail() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-brand-900">{display}</h1>
               {member?.isRegistered ? (
-                <span className="pill bg-green-100 text-green-700 inline-flex items-center gap-1">
+                <span className="pill bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60 inline-flex items-center gap-1">
                   <ShieldCheck size={12} /> Registered TVK Member
                 </span>
               ) : (
-                <span className="pill bg-gray-100 text-gray-500 inline-flex items-center gap-1">
+                <span className="pill bg-brand-100 text-brand-500 ring-1 ring-brand-200 inline-flex items-center gap-1">
                   <Database size={12} /> Voter Roll
                 </span>
               )}
@@ -180,7 +180,7 @@ export default function VoterDetail() {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="font-semibold text-brand-900">{r.optionTitle}</div>
-                    <span className="pill bg-brand-50 text-brand-700">{r.serviceTitle}</span>
+                    <span className="pill bg-brand-50 text-brand-700 ring-1 ring-brand-200">{r.serviceTitle}</span>
                     <span
                       className={`pill ${STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-700'}`}
                     >

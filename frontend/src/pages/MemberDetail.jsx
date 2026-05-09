@@ -4,10 +4,10 @@ import { ArrowLeft, Phone, MessageCircle, Calendar, MapPin, ShieldCheck, IdCard 
 import api from '../api';
 
 const STATUS_COLORS = {
-  new: 'bg-amber-100 text-amber-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-green-100 text-green-700',
-  rejected: 'bg-gray-200 text-gray-700',
+  new: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/60',
+  in_progress: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/60',
+  resolved: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60',
+  rejected: 'bg-brand-100 text-brand-600 ring-1 ring-brand-200',
 };
 
 export default function MemberDetail() {
@@ -30,8 +30,8 @@ export default function MemberDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to="/members" className="inline-flex items-center gap-1 text-sm text-brand-700 hover:underline">
-        <ArrowLeft size={14} /> Back to members
+      <Link to="/members" className="inline-flex items-center gap-1.5 text-[12px] font-semibold tracking-wide uppercase text-brand-500 hover:text-brand-900 transition">
+        <ArrowLeft size={13} /> Back to members
       </Link>
 
       <div className="card p-6">
@@ -46,17 +46,17 @@ export default function MemberDetail() {
                 m.registrationType === 'epic' && m.epicNo ? (
                   <Link
                     to={`/voters/${m.epicNo}`}
-                    className="pill inline-flex items-center gap-1 bg-green-100 text-green-700 hover:bg-green-200"
+                    className="pill inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60 hover:bg-emerald-100"
                   >
                     <ShieldCheck size={12} /> EPIC Verified
                   </Link>
                 ) : (
-                  <span className="pill inline-flex items-center gap-1 bg-amber-100 text-amber-700">
+                  <span className="pill inline-flex items-center gap-1 bg-amber-50 text-amber-700 ring-1 ring-amber-200/60">
                     <ShieldCheck size={12} /> Manual
                   </span>
                 )
               ) : (
-                <span className="pill bg-gray-100 text-gray-500">Not registered</span>
+                <span className="pill bg-brand-100 text-brand-500 ring-1 ring-brand-200">Not registered</span>
               )}
             </div>
             <div className="text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1 mt-1">
@@ -100,7 +100,7 @@ export default function MemberDetail() {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="font-semibold text-brand-900">{r.optionTitle}</div>
-                    <span className="pill bg-brand-50 text-brand-700">{r.serviceTitle}</span>
+                    <span className="pill bg-brand-50 text-brand-700 ring-1 ring-brand-200">{r.serviceTitle}</span>
                     <span className={`pill ${STATUS_COLORS[r.status]}`}>{r.status.replace('_', ' ')}</span>
                   </div>
                   <span className="text-xs text-gray-400 inline-flex items-center gap-1">
