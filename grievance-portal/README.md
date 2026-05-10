@@ -33,47 +33,60 @@ to set `VITE_API_URL` locally.
 
 ## Authentication
 
-Two-step OTP. The delivery channel is chosen automatically per request:
-
-- **Inside the user's 24-hour WhatsApp window** (they messaged the bot in
-  the last 23 hours) → free-form text message via `sendOtpText`. **Free.**
-- **Outside the window / first-ever contact** → AUTHENTICATION-category
-  template via `sendOtpTemplate`. Costs one conversation per send.
-
-The dispatcher reads `Member.lastInboundAt`, which the bot's webhook handler
-updates on every inbound. The portal never writes that field, so it cleanly
-represents "WhatsApp activity only".
+Two-step OTP. Every send uses the same styled UTILITY template so the
+recipient gets a consistent branded message with a native one-tap **Copy
+code** button regardless of whether they have an active 24-hour WhatsApp
+window. The trade-off (paying a tiny per-conversation Utility fee even for
+in-window users) is accepted because COPY_CODE buttons are template-only on
+WhatsApp Cloud API — free-form messages cannot render them.
 
 Flow:
 
 1. The portal posts `{ phone, mode }` to `POST /api/portal/auth/send-otp`.
-2. The backend hashes a 6-digit code into the `OtpCode` collection (TTL 5 m,
-   max 5 attempts) and dispatches it on the channel above.
-3. The response includes `channel: 'text' | 'template'` so the UI / logs can
-   show which path was used.
-4. The user submits the code; `verify-otp` (login) or `register` (one-shot
+2. The backend hashes a 6-digit code into the `OtpCode` collection
+   (TTL 5 m, max 5 attempts).
+3. The OTP is delivered via the `tvk_portal_otp_styled` UTILITY template.
+   If that template doesn't exist on the WABA yet the backend creates it
+   itself and retries the send in the same request (auto-heal).
+4. The response includes `channel: 'template'`, `messageId` and
+   `recipientOnWhatsApp` for diagnostics.
+5. The user submits the code; `verify-otp` (login) or `register` (one-shot
    register) returns a 30-day JWT, stored in `localStorage` as
    `tvk_portal_token`.
 
 Sessions are auto-rehydrated on page load by `AuthProvider` calling
 `GET /api/portal/auth/me`.
 
-### Required Meta template (only used when window is closed)
+### Auto-registered template
 
-Register an Authentication template in WABA Manager:
+On the first OTP request after a fresh deploy the backend registers this
+template with Meta automatically — no manual WABA Manager step required.
 
 | Field | Value |
 |-------|-------|
-| Name | `tvk_portal_otp` (or whatever you set in `META_OTP_TEMPLATE_NAME`) |
-| Category | `AUTHENTICATION` |
-| Language | `en_US` (or whatever you set in `META_OTP_TEMPLATE_LANGUAGE`) |
-| Body | `Your TVK Mylapore portal verification code is {{1}}.` |
-| Button | OTP / Copy code, parameter = `{{1}}` |
+| Name | `tvk_portal_otp_styled` (override with `META_OTP_TEMPLATE_NAME`) |
+| Category | `UTILITY` |
+| Language | `en_US` (override with `META_OTP_TEMPLATE_LANGUAGE`) |
+| Body | (matches the in-app preview — TVK Mylapore Portal heading + 5-min validity + do-not-share warning) |
+| Button | `COPY_CODE`, label "Copy code", parameter = the OTP digits |
 
-Until this template is approved, first-time visitors who haven't yet messaged
-the bot will receive a 502 with a hint to WhatsApp the number once before
-retrying. Returning users (active 24h window) work immediately because they
-hit the free-form branch.
+UTILITY templates aren't auto-approved like AUTHENTICATION ones; expect a
+short PENDING window (seconds to a few minutes) the very first time. While
+PENDING, the route returns 503 "OTP service is finishing setup. Please
+retry in a few seconds." Once APPROVED, it stays cached in process memory
+and every send is one fast Meta call.
+
+### Admin-only escape hatches
+
+When `PORTAL_ADMIN_TOKEN` is set on the backend and the request includes a
+matching `x-portal-admin-token` header, the OTP endpoint:
+
+- accepts `force: 'text'` to bypass the template and send a plain free-form
+  text instead — useful when the template is stuck in review;
+- echoes the raw OTP code back as `_devCode` in the response so the rest of
+  the pipeline (verify, register) can be exercised without WhatsApp delivery;
+- exposes `GET /api/portal/auth/diag` for live config + template status +
+  per-phone OTP history.
 
 ## Backend env vars (extras for the portal)
 
@@ -82,8 +95,9 @@ affect the WhatsApp bot, they just enable the portal:
 
 ```
 PORTAL_JWT_SECRET=<long random string>
-META_OTP_TEMPLATE_NAME=tvk_portal_otp
+META_OTP_TEMPLATE_NAME=tvk_portal_otp_styled   # default; override only if you renamed the template
 META_OTP_TEMPLATE_LANGUAGE=en_US
+PORTAL_ADMIN_TOKEN=<long random string>        # optional, gates /auth/diag + force/_devCode
 ```
 
 ## Deploying to Vercel

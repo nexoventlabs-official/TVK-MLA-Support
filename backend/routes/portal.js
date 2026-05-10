@@ -117,10 +117,10 @@ async function sendOtpTemplateWithSelfHeal(e164, code) {
 /**
  * Pick the most recent "user messaged us" timestamp we know about. Prefers
  * the dedicated `lastInboundAt` field, but falls back to `lastSeenAt` for
- * Members that pre-date the lastInboundAt rollout — as long as we have any
- * record of inbound activity (`messageCount > 0`). Without this fallback,
- * historical members would all be treated as out-of-window and forced
- * through the paid template path.
+ * Members that pre-date the lastInboundAt rollout. Surfaced in logs so we
+ * can still tell whether the recipient had an open 24h window at send time
+ * — useful for diagnosing delivery issues — even though we no longer use
+ * the value to choose between text and template.
  */
 function inboundActivityAt(member) {
   if (!member) return null;
@@ -130,34 +130,28 @@ function inboundActivityAt(member) {
 }
 
 /**
- * Decide which channel to use for an OTP delivery and dispatch it. If the
- * user has an open 24-hour window we send a regular text (free, instant,
- * never depends on a Meta template being approved). Otherwise we fall back
- * to the AUTHENTICATION-category template which works for cold starts but
- * costs us per conversation.
+ * Send the OTP. Always uses the styled UTILITY template — free-form text
+ * messages can't carry a native COPY_CODE button (Meta restricts that to
+ * templates), and a single, consistent, one-tap-to-copy UX is more
+ * important than the small saving from sending free-form text inside the
+ * 24-hour window. Per-conversation Utility charge applies; in India that's
+ * a few paise per OTP.
  *
- * `force` is an admin-gated override — pass 'text' or 'template' to skip
- * the auto-dispatch and exercise that specific channel for testing.
+ * `force === 'text'` (admin only) is preserved as an escape hatch for
+ * testing — it sends the plain free-form text instead of the template.
  *
  * Returns `{ channel, meta, windowOpen, inboundAt }` so the calling route
- * can log Meta's accepted message id + wa_id and what we knew about the
- * recipient's window state at decision time.
+ * can log Meta's accepted message id and the recipient's window state.
  */
 async function dispatchOtp(member, e164, code, { force } = {}) {
   const inboundAt = inboundActivityAt(member);
   const windowOpen = !!inboundAt && Date.now() - inboundAt.getTime() < WA_FREE_WINDOW_MS;
 
-  let channel;
-  if (force === 'text' || force === 'template') {
-    channel = force;
-  } else {
-    channel = windowOpen ? 'text' : 'template';
-  }
-
-  if (channel === 'text') {
+  if (force === 'text') {
     const meta = await sendOtpText(e164, code);
     return { channel: 'text', meta, windowOpen, inboundAt };
   }
+
   const meta = await sendOtpTemplateWithSelfHeal(e164, code);
   return { channel: 'template', meta, windowOpen, inboundAt };
 }
