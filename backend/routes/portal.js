@@ -130,28 +130,37 @@ function inboundActivityAt(member) {
 }
 
 /**
- * Send the OTP. Always uses the styled UTILITY template — free-form text
- * messages can't carry a native COPY_CODE button (Meta restricts that to
- * templates), and a single, consistent, one-tap-to-copy UX is more
- * important than the small saving from sending free-form text inside the
- * 24-hour window. Per-conversation Utility charge applies; in India that's
- * a few paise per OTP.
+ * Choose the cheapest reliable channel and send the OTP.
  *
- * `force === 'text'` (admin only) is preserved as an escape hatch for
- * testing — it sends the plain free-form text instead of the template.
+ * - In-window users (lastInboundAt within 23 h) get a free-form text
+ *   message. Free for the business since it's part of the open
+ *   customer-service conversation. No native Copy code button — the OS's
+ *   long-press-to-copy gesture on the bold code is the workaround.
+ * - Out-of-window users get the AUTHENTICATION template (matches temp.png:
+ *   "{{1}} is your verification code. For your security, do not share this
+ *   code. This code expires in 5 minutes." with a real Copy code button).
  *
- * Returns `{ channel, meta, windowOpen, inboundAt }` so the calling route
- * can log Meta's accepted message id and the recipient's window state.
+ * `force` (admin-gated) is the testing escape hatch — pass 'text' or
+ * 'template' to skip the auto-decision and exercise that channel directly.
+ *
+ * Returns `{ channel, meta, windowOpen, inboundAt }` so the route can log
+ * Meta's accepted message id and the dispatcher's view of the recipient.
  */
 async function dispatchOtp(member, e164, code, { force } = {}) {
   const inboundAt = inboundActivityAt(member);
   const windowOpen = !!inboundAt && Date.now() - inboundAt.getTime() < WA_FREE_WINDOW_MS;
 
-  if (force === 'text') {
+  let channel;
+  if (force === 'text' || force === 'template') {
+    channel = force;
+  } else {
+    channel = windowOpen ? 'text' : 'template';
+  }
+
+  if (channel === 'text') {
     const meta = await sendOtpText(e164, code);
     return { channel: 'text', meta, windowOpen, inboundAt };
   }
-
   const meta = await sendOtpTemplateWithSelfHeal(e164, code);
   return { channel: 'template', meta, windowOpen, inboundAt };
 }
@@ -284,9 +293,14 @@ router.post('/auth/send-otp', async (req, res) => {
       });
     } catch (err) {
       const meta = err.response?.data?.error;
+      const inboundAt = inboundActivityAt(existing);
+      const windowOpen = !!inboundAt && Date.now() - inboundAt.getTime() < WA_FREE_WINDOW_MS;
       console.error('[portal] OTP dispatch failed:', {
         phone: e164,
-        attempted: existing?.lastInboundAt ? 'text' : 'template',
+        attempted: force || (windowOpen ? 'text' : 'template'),
+        forced: !!force,
+        windowOpen,
+        inboundAt,
         metaCode: meta?.code,
         metaMessage: meta?.message,
         details: meta?.error_data?.details,
