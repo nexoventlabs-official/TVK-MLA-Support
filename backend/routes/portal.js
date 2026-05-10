@@ -115,27 +115,51 @@ async function sendOtpTemplateWithSelfHeal(e164, code) {
 }
 
 /**
+ * Pick the most recent "user messaged us" timestamp we know about. Prefers
+ * the dedicated `lastInboundAt` field, but falls back to `lastSeenAt` for
+ * Members that pre-date the lastInboundAt rollout — as long as we have any
+ * record of inbound activity (`messageCount > 0`). Without this fallback,
+ * historical members would all be treated as out-of-window and forced
+ * through the paid template path.
+ */
+function inboundActivityAt(member) {
+  if (!member) return null;
+  if (member.lastInboundAt) return new Date(member.lastInboundAt);
+  if ((member.messageCount || 0) > 0 && member.lastSeenAt) return new Date(member.lastSeenAt);
+  return null;
+}
+
+/**
  * Decide which channel to use for an OTP delivery and dispatch it. If the
  * user has an open 24-hour window we send a regular text (free, instant,
  * never depends on a Meta template being approved). Otherwise we fall back
  * to the AUTHENTICATION-category template which works for cold starts but
  * costs us per conversation.
  *
- * Returns `{ channel, meta }` so the calling route can log Meta's accepted
- * message id + wa_id — those let us correlate this send with the delivery
- * webhook later and confirm the recipient is actually on WhatsApp.
+ * `force` is an admin-gated override — pass 'text' or 'template' to skip
+ * the auto-dispatch and exercise that specific channel for testing.
+ *
+ * Returns `{ channel, meta, windowOpen, inboundAt }` so the calling route
+ * can log Meta's accepted message id + wa_id and what we knew about the
+ * recipient's window state at decision time.
  */
-async function dispatchOtp(member, e164, code) {
-  const inWindow =
-    member?.lastInboundAt &&
-    Date.now() - new Date(member.lastInboundAt).getTime() < WA_FREE_WINDOW_MS;
+async function dispatchOtp(member, e164, code, { force } = {}) {
+  const inboundAt = inboundActivityAt(member);
+  const windowOpen = !!inboundAt && Date.now() - inboundAt.getTime() < WA_FREE_WINDOW_MS;
 
-  if (inWindow) {
+  let channel;
+  if (force === 'text' || force === 'template') {
+    channel = force;
+  } else {
+    channel = windowOpen ? 'text' : 'template';
+  }
+
+  if (channel === 'text') {
     const meta = await sendOtpText(e164, code);
-    return { channel: 'text', meta };
+    return { channel: 'text', meta, windowOpen, inboundAt };
   }
   const meta = await sendOtpTemplateWithSelfHeal(e164, code);
-  return { channel: 'template', meta };
+  return { channel: 'template', meta, windowOpen, inboundAt };
 }
 
 /**
@@ -232,12 +256,22 @@ router.post('/auth/send-otp', async (req, res) => {
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     });
 
+    // Admin-only channel override. Letting end-users force the paid template
+    // path would be an abuse vector, so we ignore the field unless the caller
+    // proves they hold the admin token.
+    const force =
+      hasAdminToken(req) && (req.body?.force === 'text' || req.body?.force === 'template')
+        ? req.body.force
+        : null;
+
     let channel = 'none';
     let metaResp = null;
+    let dispatchInfo = null;
     try {
-      const out = await dispatchOtp(existing, e164, code);
+      const out = await dispatchOtp(existing, e164, code, { force });
       channel = out.channel;
       metaResp = out.meta;
+      dispatchInfo = out;
 
       // Render-visible record of what Meta accepted so we can correlate
       // delivery-webhook events later. wa_id should equal the input phone
@@ -247,9 +281,9 @@ router.post('/auth/send-otp', async (req, res) => {
         phone: e164,
         purpose: mode,
         channel,
-        windowOpen: !!existing?.lastInboundAt &&
-          Date.now() - new Date(existing.lastInboundAt).getTime() < WA_FREE_WINDOW_MS,
-        lastInboundAt: existing?.lastInboundAt || null,
+        forced: !!force,
+        windowOpen: out.windowOpen,
+        inboundAt: out.inboundAt,
         messageId: metaResp?.messages?.[0]?.id || null,
         waId: metaResp?.contacts?.[0]?.wa_id || null,
         recipientOnWhatsApp: !!metaResp?.contacts?.[0]?.wa_id,
@@ -294,9 +328,18 @@ router.post('/auth/send-otp', async (req, res) => {
     };
     // Admin override: if the caller proves they hold the admin token, echo
     // the raw OTP code back so they can verify the rest of the flow without
-    // depending on WhatsApp delivery actually working. NEVER returned without
+    // depending on WhatsApp delivery actually working. Also include the
+    // dispatcher's view of the window state so the operator can confirm the
+    // 24h-window detection is working as intended. NEVER returned without
     // the header.
-    if (hasAdminToken(req)) response._devCode = code;
+    if (hasAdminToken(req)) {
+      response._devCode = code;
+      response._dispatch = {
+        forced: !!force,
+        windowOpen: dispatchInfo?.windowOpen ?? null,
+        inboundAt: dispatchInfo?.inboundAt ?? null,
+      };
+    }
 
     res.json(response);
   } catch (err) {
