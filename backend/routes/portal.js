@@ -61,6 +61,22 @@ const WA_FREE_WINDOW_MS = 23 * 60 * 60 * 1000;
 let otpTemplateConfirmed = false;
 
 /**
+ * Returns true iff the request carries the configured admin token. Used by
+ * the diagnostic endpoints + the "echo OTP code in response" override on
+ * /auth/send-otp so we can test the rest of the pipeline (verify, register)
+ * even if the WhatsApp message itself isn't reaching the recipient phone.
+ *
+ * Disabled by default: PORTAL_ADMIN_TOKEN must be set to a non-empty string
+ * AND the request must include a matching `x-portal-admin-token` header.
+ */
+function hasAdminToken(req) {
+  const expected = process.env.PORTAL_ADMIN_TOKEN;
+  if (!expected) return false;
+  const got = req.headers['x-portal-admin-token'];
+  return typeof got === 'string' && got.length > 0 && got === expected;
+}
+
+/**
  * Send the AUTHENTICATION template, auto-creating it on Meta the first time
  * we see a 132001 ("template name does not exist") error. AUTHENTICATION
  * templates have a fixed structure that Meta auto-approves the moment we
@@ -72,9 +88,9 @@ let otpTemplateConfirmed = false;
 async function sendOtpTemplateWithSelfHeal(e164, code) {
   if (otpTemplateConfirmed) return sendOtpTemplate(e164, code);
   try {
-    await sendOtpTemplate(e164, code);
+    const data = await sendOtpTemplate(e164, code);
     otpTemplateConfirmed = true;
-    return;
+    return data;
   } catch (err) {
     const metaCode = err.response?.data?.error?.code;
     // 132001 = template name does not exist; 132000 = invalid name.
@@ -92,8 +108,9 @@ async function sendOtpTemplateWithSelfHeal(e164, code) {
       throw error;
     }
 
-    await sendOtpTemplate(e164, code);
+    const data = await sendOtpTemplate(e164, code);
     otpTemplateConfirmed = true;
+    return data;
   }
 }
 
@@ -104,7 +121,9 @@ async function sendOtpTemplateWithSelfHeal(e164, code) {
  * to the AUTHENTICATION-category template which works for cold starts but
  * costs us per conversation.
  *
- * Returns the channel actually used so we can include it in logs / dev hints.
+ * Returns `{ channel, meta }` so the calling route can log Meta's accepted
+ * message id + wa_id — those let us correlate this send with the delivery
+ * webhook later and confirm the recipient is actually on WhatsApp.
  */
 async function dispatchOtp(member, e164, code) {
   const inWindow =
@@ -112,11 +131,11 @@ async function dispatchOtp(member, e164, code) {
     Date.now() - new Date(member.lastInboundAt).getTime() < WA_FREE_WINDOW_MS;
 
   if (inWindow) {
-    await sendOtpText(e164, code);
-    return 'text';
+    const meta = await sendOtpText(e164, code);
+    return { channel: 'text', meta };
   }
-  await sendOtpTemplateWithSelfHeal(e164, code);
-  return 'template';
+  const meta = await sendOtpTemplateWithSelfHeal(e164, code);
+  return { channel: 'template', meta };
 }
 
 /**
@@ -214,8 +233,27 @@ router.post('/auth/send-otp', async (req, res) => {
     });
 
     let channel = 'none';
+    let metaResp = null;
     try {
-      channel = await dispatchOtp(existing, e164, code);
+      const out = await dispatchOtp(existing, e164, code);
+      channel = out.channel;
+      metaResp = out.meta;
+
+      // Render-visible record of what Meta accepted so we can correlate
+      // delivery-webhook events later. wa_id should equal the input phone
+      // for valid WhatsApp users; if it's missing, the recipient isn't on
+      // WhatsApp and that explains a "200 OK but no message arrived".
+      console.log('[portal] OTP dispatched:', {
+        phone: e164,
+        purpose: mode,
+        channel,
+        windowOpen: !!existing?.lastInboundAt &&
+          Date.now() - new Date(existing.lastInboundAt).getTime() < WA_FREE_WINDOW_MS,
+        lastInboundAt: existing?.lastInboundAt || null,
+        messageId: metaResp?.messages?.[0]?.id || null,
+        waId: metaResp?.contacts?.[0]?.wa_id || null,
+        recipientOnWhatsApp: !!metaResp?.contacts?.[0]?.wa_id,
+      });
     } catch (err) {
       const meta = err.response?.data?.error;
       console.error('[portal] OTP dispatch failed:', {
@@ -247,7 +285,20 @@ router.post('/auth/send-otp', async (req, res) => {
       console.warn(`[portal] DEV ONLY — OTP for ${e164}: ${code}`);
     }
 
-    res.json({ ok: true, ttlSeconds: OTP_TTL_MS / 1000, channel });
+    const response = {
+      ok: true,
+      ttlSeconds: OTP_TTL_MS / 1000,
+      channel,
+      messageId: metaResp?.messages?.[0]?.id || null,
+      recipientOnWhatsApp: metaResp?.contacts?.[0]?.wa_id ? true : false,
+    };
+    // Admin override: if the caller proves they hold the admin token, echo
+    // the raw OTP code back so they can verify the rest of the flow without
+    // depending on WhatsApp delivery actually working. NEVER returned without
+    // the header.
+    if (hasAdminToken(req)) response._devCode = code;
+
+    res.json(response);
   } catch (err) {
     console.error('[portal] send-otp error:', err);
     res.status(500).json({ error: 'Could not send OTP' });
@@ -370,6 +421,82 @@ router.post('/auth/register', async (req, res) => {
 /** GET /auth/me — return the current portal user. */
 router.get('/auth/me', requireAuth, (req, res) => {
   res.json({ user: publicMember(req.portalUser) });
+});
+
+/**
+ * GET /auth/diag — operator diagnostics for the OTP pipeline.
+ *
+ * Gated by the `x-portal-admin-token` header matching `PORTAL_ADMIN_TOKEN`,
+ * so it's safe to deploy publicly. Returns enough info to diagnose
+ * "API said success but no WhatsApp message arrived" without giving any
+ * attacker something to brute-force:
+ *   - which Meta IDs the backend is using (so you can confirm they match
+ *     the WABA you actually own)
+ *   - the OTP template's name + status as Meta sees it
+ *   - the last 10 OTP attempts for the optional ?phone= filter, with the
+ *     plaintext code redacted (we only ever store the hash anyway)
+ *
+ * Optional query: ?phone=8106811285  (any of the formats normalisePhone
+ * accepts) → restricts the OtpCode listing to that recipient.
+ */
+router.get('/auth/diag', async (req, res) => {
+  if (!hasAdminToken(req)) return res.status(404).json({ error: 'Not found' });
+
+  const out = {
+    config: {
+      graphVersion: process.env.META_GRAPH_VERSION || null,
+      phoneNumberId: process.env.META_PHONE_NUMBER_ID || null,
+      wabaId: process.env.META_WABA_ID || null,
+      hasAccessToken: !!process.env.META_ACCESS_TOKEN,
+      otpTemplateName: process.env.META_OTP_TEMPLATE_NAME || 'tvk_portal_otp',
+      otpTemplateLanguage: process.env.META_OTP_TEMPLATE_LANGUAGE || 'en_US',
+      nodeEnv: process.env.NODE_ENV || 'development',
+      otpTemplateConfirmed,
+    },
+    templates: null,
+    member: null,
+    otps: [],
+  };
+
+  // Templates — list and pull out the OTP one for quick scanning.
+  try {
+    const list = await require('../services/metaCloud').listTemplates();
+    out.templates = (list?.data || []).map((t) => ({
+      name: t.name,
+      language: t.language,
+      status: t.status,
+      category: t.category,
+      rejected_reason: t.rejected_reason,
+    }));
+  } catch (err) {
+    out.templates = { error: err.response?.data?.error || err.message };
+  }
+
+  // Per-phone slice (optional).
+  if (req.query.phone) {
+    const e164 = normalisePhone(req.query.phone);
+    if (e164) {
+      const m = await Member.findOne({ phone: e164 }).lean();
+      out.member = m ? {
+        phone: m.phone,
+        name: m.name || m.profileName || '',
+        isRegistered: !!m.isRegistered,
+        messageCount: m.messageCount || 0,
+        lastInboundAt: m.lastInboundAt || null,
+        lastSeenAt: m.lastSeenAt || null,
+      } : { exists: false, phone: e164 };
+
+      out.otps = await OtpCode.find({ phone: e164 })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .select('phone purpose attempts consumed createdAt expiresAt')
+        .lean();
+    } else {
+      out.member = { error: 'phone could not be normalised' };
+    }
+  }
+
+  res.json(out);
 });
 
 /* ─── public catalog endpoints ────────────────────────────────────── */
