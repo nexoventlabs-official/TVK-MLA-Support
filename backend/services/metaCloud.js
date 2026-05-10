@@ -300,6 +300,35 @@ async function sendTemplate(to, { name, language, components = [] }) {
   return data;
 }
 
+/**
+ * Send an Authentication-category template that delivers a 6-digit OTP code.
+ *
+ * The template (registered in Meta WABA Manager) is expected to have:
+ *   - Category: AUTHENTICATION
+ *   - One BODY parameter for the code: e.g. "Your TVK Mylapore portal code is {{1}}."
+ *   - One BUTTON of sub-type OTP / COPY_CODE that takes {{1}} as the code parameter.
+ *
+ * The web portal calls this on /api/portal/auth/send-otp. The WhatsApp bot
+ * remains untouched — it never invokes this helper.
+ */
+async function sendOtpTemplate(to, code) {
+  const name = process.env.META_OTP_TEMPLATE_NAME || 'tvk_portal_otp';
+  const language = process.env.META_OTP_TEMPLATE_LANGUAGE || 'en_US';
+  const components = [
+    {
+      type: 'body',
+      parameters: [{ type: 'text', text: String(code) }],
+    },
+    {
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: String(code) }],
+    },
+  ];
+  return sendTemplate(to, { name, language, components });
+}
+
 /* ─── Flow management ─── */
 
 async function createFlow(name, categories = ['OTHER'], { endpointUri } = {}) {
@@ -462,6 +491,7 @@ module.exports = {
   downloadMedia,
   sendFlowMessage,
   sendTemplate,
+  sendOtpTemplate,
   createFlow,
   updateFlowJSON,
   publishFlow,
