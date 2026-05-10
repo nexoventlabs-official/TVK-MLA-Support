@@ -33,21 +33,32 @@ to set `VITE_API_URL` locally.
 
 ## Authentication
 
-Two-step OTP, delivered via the WhatsApp Authentication-category template:
+Two-step OTP. The delivery channel is chosen automatically per request:
 
-1. The portal sends the user's number + intent (`login` / `register`) to
-   `POST /api/portal/auth/send-otp`.
-2. The backend hashes a 6-digit code into the `OtpCode` collection and ships
-   it via `sendOtpTemplate(...)` (Meta Cloud API).
-3. The user types the code; the portal verifies it via `verify-otp` (login)
-   or `register` (one-shot register), receives a 30-day JWT, and stores it
-   in `localStorage` under `tvk_portal_token`.
+- **Inside the user's 24-hour WhatsApp window** (they messaged the bot in
+  the last 23 hours) → free-form text message via `sendOtpText`. **Free.**
+- **Outside the window / first-ever contact** → AUTHENTICATION-category
+  template via `sendOtpTemplate`. Costs one conversation per send.
+
+The dispatcher reads `Member.lastInboundAt`, which the bot's webhook handler
+updates on every inbound. The portal never writes that field, so it cleanly
+represents "WhatsApp activity only".
+
+Flow:
+
+1. The portal posts `{ phone, mode }` to `POST /api/portal/auth/send-otp`.
+2. The backend hashes a 6-digit code into the `OtpCode` collection (TTL 5 m,
+   max 5 attempts) and dispatches it on the channel above.
+3. The response includes `channel: 'text' | 'template'` so the UI / logs can
+   show which path was used.
+4. The user submits the code; `verify-otp` (login) or `register` (one-shot
+   register) returns a 30-day JWT, stored in `localStorage` as
+   `tvk_portal_token`.
 
 Sessions are auto-rehydrated on page load by `AuthProvider` calling
-`GET /api/portal/auth/me` — if the JWT is stale, the token is dropped and the
-guest hero/CTA is shown again.
+`GET /api/portal/auth/me`.
 
-### Required Meta template
+### Required Meta template (only used when window is closed)
 
 Register an Authentication template in WABA Manager:
 
@@ -58,6 +69,11 @@ Register an Authentication template in WABA Manager:
 | Language | `en_US` (or whatever you set in `META_OTP_TEMPLATE_LANGUAGE`) |
 | Body | `Your TVK Mylapore portal verification code is {{1}}.` |
 | Button | OTP / Copy code, parameter = `{{1}}` |
+
+Until this template is approved, first-time visitors who haven't yet messaged
+the bot will receive a 502 with a hint to WhatsApp the number once before
+retrying. Returning users (active 24h window) work immediately because they
+hit the free-form branch.
 
 ## Backend env vars (extras for the portal)
 

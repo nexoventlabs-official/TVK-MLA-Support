@@ -40,7 +40,7 @@ const OtpCode = require('../models/OtpCode');
 const upload = require('../middleware/upload');
 const { uploadBuffer } = require('../services/cloudinary');
 const { generateTicketId } = require('../services/ticketing');
-const { sendOtpTemplate } = require('../services/metaCloud');
+const { sendOtpText, sendOtpTemplate } = require('../services/metaCloud');
 
 const router = express.Router();
 
@@ -49,6 +49,33 @@ const router = express.Router();
 const JWT_SECRET = () => process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET || 'dev-portal-secret';
 const OTP_TTL_MS = 5 * 60 * 1000;        // 5 minutes
 const MAX_OTP_ATTEMPTS = 5;
+// WhatsApp's Customer Service Window: free-form messages are billable-free
+// for 24 hours after the user's last inbound message. We give ourselves a
+// small safety margin (23 h) so a code sent right at the edge doesn't get
+// rejected mid-flight by Meta.
+const WA_FREE_WINDOW_MS = 23 * 60 * 60 * 1000;
+
+/**
+ * Decide which channel to use for an OTP delivery and dispatch it. If the
+ * user has an open 24-hour window we send a regular text (free, instant,
+ * never depends on a Meta template being approved). Otherwise we fall back
+ * to the AUTHENTICATION-category template which works for cold starts but
+ * costs us per conversation.
+ *
+ * Returns the channel actually used so we can include it in logs / dev hints.
+ */
+async function dispatchOtp(member, e164, code) {
+  const inWindow =
+    member?.lastInboundAt &&
+    Date.now() - new Date(member.lastInboundAt).getTime() < WA_FREE_WINDOW_MS;
+
+  if (inWindow) {
+    await sendOtpText(e164, code);
+    return 'text';
+  }
+  await sendOtpTemplate(e164, code);
+  return 'template';
+}
 
 /**
  * Normalise an Indian phone number to E.164 digits (no '+'), e.g. "919876543210".
@@ -144,18 +171,39 @@ router.post('/auth/send-otp', async (req, res) => {
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     });
 
+    let channel = 'none';
     try {
-      await sendOtpTemplate(e164, code);
+      channel = await dispatchOtp(existing, e164, code);
     } catch (err) {
-      console.error('[portal] sendOtpTemplate failed:', err.response?.data || err.message);
+      const meta = err.response?.data?.error;
+      console.error('[portal] OTP dispatch failed:', {
+        phone: e164,
+        attempted: existing?.lastInboundAt ? 'text' : 'template',
+        metaCode: meta?.code,
+        metaMessage: meta?.message,
+        details: meta?.error_data?.details,
+      });
+
       if (process.env.NODE_ENV === 'production') {
+        // Surface a user-actionable message rather than a generic 502.
+        // 132001 = template name not found; 131047 = re-engagement / window closed.
+        if (meta?.code === 132001) {
+          return res.status(502).json({
+            error: 'OTP service is being set up. Please WhatsApp our number once and retry, or contact support.',
+          });
+        }
+        if (meta?.code === 131047) {
+          return res.status(502).json({
+            error: 'WhatsApp session has expired. Please send any message to our WhatsApp first, then retry.',
+          });
+        }
         return res.status(502).json({ error: 'Could not deliver OTP. Try again in a moment.' });
       }
       // Dev fallback so you can test without Meta credentials configured.
       console.warn(`[portal] DEV ONLY — OTP for ${e164}: ${code}`);
     }
 
-    res.json({ ok: true, ttlSeconds: OTP_TTL_MS / 1000 });
+    res.json({ ok: true, ttlSeconds: OTP_TTL_MS / 1000, channel });
   } catch (err) {
     console.error('[portal] send-otp error:', err);
     res.status(500).json({ error: 'Could not send OTP' });

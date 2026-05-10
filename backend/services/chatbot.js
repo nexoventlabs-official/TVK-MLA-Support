@@ -22,6 +22,9 @@ async function trackInbound({ phone, profileName, text }) {
         $set: {
           profileName: profileName || '',
           lastSeenAt: new Date(),
+          // Inbound-only timestamp. The portal OTP dispatcher reads this to
+          // decide free-form vs. paid template; no other code path writes it.
+          lastInboundAt: new Date(),
           lastMessage: (text || '').slice(0, 500),
         },
         $inc: { messageCount: 1 },

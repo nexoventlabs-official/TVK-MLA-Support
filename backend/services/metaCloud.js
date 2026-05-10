@@ -301,15 +301,36 @@ async function sendTemplate(to, { name, language, components = [] }) {
 }
 
 /**
+ * Send the OTP code as a regular text message — only valid INSIDE the user's
+ * 24-hour customer-service window (i.e. when they've messaged the bot in the
+ * last 24 hours). Free of charge: no template, no per-conversation billing.
+ *
+ * The format is shaped to mirror the template UX as closely as free-form
+ * messages allow. WhatsApp does not expose a real "copy code" button outside
+ * AUTHENTICATION templates, so we present the code on its own line in bold +
+ * monospace so the mobile client's tap-and-hold gesture can copy it cleanly.
+ */
+async function sendOtpText(to, code) {
+  const msg =
+    `🔐 *TVK Mylapore Portal*\n\n` +
+    `Your verification code is:\n\n` +
+    `\`\`\`${code}\`\`\`\n\n` +
+    `⏱️ Valid for 5 minutes.\n` +
+    `🚫 Do *not* share this code with anyone — not even our team.\n\n` +
+    `_Tap and hold the code above to copy._`;
+  return sendText(to, msg);
+}
+
+/**
  * Send an Authentication-category template that delivers a 6-digit OTP code.
  *
- * The template (registered in Meta WABA Manager) is expected to have:
+ * Used when the user is OUTSIDE the 24-hour window (or has never messaged the
+ * bot). The template (registered in Meta WABA Manager) is expected to have:
  *   - Category: AUTHENTICATION
  *   - One BODY parameter for the code: e.g. "Your TVK Mylapore portal code is {{1}}."
  *   - One BUTTON of sub-type OTP / COPY_CODE that takes {{1}} as the code parameter.
  *
- * The web portal calls this on /api/portal/auth/send-otp. The WhatsApp bot
- * remains untouched — it never invokes this helper.
+ * The WhatsApp bot itself never invokes this helper — it's purely a portal path.
  */
 async function sendOtpTemplate(to, code) {
   const name = process.env.META_OTP_TEMPLATE_NAME || 'tvk_portal_otp';
@@ -491,6 +512,7 @@ module.exports = {
   downloadMedia,
   sendFlowMessage,
   sendTemplate,
+  sendOtpText,
   sendOtpTemplate,
   createFlow,
   updateFlowJSON,

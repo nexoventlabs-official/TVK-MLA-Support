@@ -73,6 +73,14 @@ const MemberSchema = new mongoose.Schema(
     registeredAt: { type: Date, default: null },
     firstSeenAt: { type: Date, default: Date.now },
     lastSeenAt: { type: Date, default: Date.now },
+    /**
+     * Last time the user sent us an inbound WhatsApp message. Distinct from
+     * `lastSeenAt` (which we also bump on portal logins) because the WhatsApp
+     * 24-hour customer-service window is keyed on inbound messages only.
+     * Used by the portal OTP dispatcher to choose between a free-form text
+     * message (in-window, no charge) and a paid AUTHENTICATION template.
+     */
+    lastInboundAt: { type: Date, default: null },
     messageCount: { type: Number, default: 0 },
     lastMessage: { type: String, default: '' },
     requestCount: { type: Number, default: 0 },
