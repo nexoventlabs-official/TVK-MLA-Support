@@ -40,7 +40,7 @@ const OtpCode = require('../models/OtpCode');
 const upload = require('../middleware/upload');
 const { uploadBuffer } = require('../services/cloudinary');
 const { generateTicketId } = require('../services/ticketing');
-const { sendOtpText, sendOtpTemplate } = require('../services/metaCloud');
+const { sendOtpText, sendOtpTemplate, ensureOtpTemplate } = require('../services/metaCloud');
 
 const router = express.Router();
 
@@ -54,6 +54,48 @@ const MAX_OTP_ATTEMPTS = 5;
 // small safety margin (23 h) so a code sent right at the edge doesn't get
 // rejected mid-flight by Meta.
 const WA_FREE_WINDOW_MS = 23 * 60 * 60 * 1000;
+
+// Once we successfully send through the template we cache that fact in
+// memory — listing templates on every cold-start OTP is wasteful and Meta
+// rate-limits the messaging endpoint based on overall quota.
+let otpTemplateConfirmed = false;
+
+/**
+ * Send the AUTHENTICATION template, auto-creating it on Meta the first time
+ * we see a 132001 ("template name does not exist") error. AUTHENTICATION
+ * templates have a fixed structure that Meta auto-approves the moment we
+ * register them, so the retry usually succeeds within the same request.
+ *
+ * If the freshly created template comes back PENDING (rare for AUTH), we
+ * surface a helpful error rather than silently failing.
+ */
+async function sendOtpTemplateWithSelfHeal(e164, code) {
+  if (otpTemplateConfirmed) return sendOtpTemplate(e164, code);
+  try {
+    await sendOtpTemplate(e164, code);
+    otpTemplateConfirmed = true;
+    return;
+  } catch (err) {
+    const metaCode = err.response?.data?.error?.code;
+    // 132001 = template name does not exist; 132000 = invalid name.
+    if (metaCode !== 132001 && metaCode !== 132000) throw err;
+
+    console.log('[portal] OTP template missing — auto-creating on Meta...');
+    const ensured = await ensureOtpTemplate({}); // uses META_OTP_TEMPLATE_NAME / _LANGUAGE env
+    console.log('[portal] ensureOtpTemplate:', ensured);
+
+    if (ensured.status && ensured.status !== 'APPROVED') {
+      const error = new Error(
+        `OTP template just created on Meta (status=${ensured.status}). Approval is normally instant — please retry sending in a few seconds.`
+      );
+      error.code = 'TEMPLATE_PENDING';
+      throw error;
+    }
+
+    await sendOtpTemplate(e164, code);
+    otpTemplateConfirmed = true;
+  }
+}
 
 /**
  * Decide which channel to use for an OTP delivery and dispatch it. If the
@@ -73,7 +115,7 @@ async function dispatchOtp(member, e164, code) {
     await sendOtpText(e164, code);
     return 'text';
   }
-  await sendOtpTemplate(e164, code);
+  await sendOtpTemplateWithSelfHeal(e164, code);
   return 'template';
 }
 
@@ -186,12 +228,14 @@ router.post('/auth/send-otp', async (req, res) => {
 
       if (process.env.NODE_ENV === 'production') {
         // Surface a user-actionable message rather than a generic 502.
-        // 132001 = template name not found; 131047 = re-engagement / window closed.
-        if (meta?.code === 132001) {
-          return res.status(502).json({
-            error: 'OTP service is being set up. Please WhatsApp our number once and retry, or contact support.',
+        // TEMPLATE_PENDING comes from our self-heal path: template was just
+        // created on Meta and is awaiting (usually instant) approval.
+        if (err.code === 'TEMPLATE_PENDING') {
+          return res.status(503).json({
+            error: 'OTP service is finishing setup. Please retry in a few seconds.',
           });
         }
+        // 131047 = re-engagement required (24h window closed AND template missing).
         if (meta?.code === 131047) {
           return res.status(502).json({
             error: 'WhatsApp session has expired. Please send any message to our WhatsApp first, then retry.',

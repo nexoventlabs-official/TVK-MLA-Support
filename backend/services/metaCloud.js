@@ -301,6 +301,53 @@ async function sendTemplate(to, { name, language, components = [] }) {
 }
 
 /**
+ * Look for the portal OTP template on the WABA. If it doesn't exist, create
+ * it as an AUTHENTICATION-category template (auto-approved by Meta because
+ * the structure is fixed). Returns `{ status, created }` so callers can tell
+ * whether the template is ready to send right now.
+ *
+ * AUTHENTICATION templates have a fixed body Meta generates itself — we just
+ * pick whether to include the security-recommendation boilerplate ("do not
+ * share this code with anyone") and the expiry footer.
+ */
+async function ensureOtpTemplate({ name, language = 'en_US', codeExpirationMinutes = 5 } = {}) {
+  const tplName = name || process.env.META_OTP_TEMPLATE_NAME || 'tvk_portal_otp';
+  const lang = language || process.env.META_OTP_TEMPLATE_LANGUAGE || 'en_US';
+
+  // 1. Look for an existing template with this name+language.
+  let existing = null;
+  try {
+    const list = await listTemplates();
+    existing = (list?.data || []).find((t) => t.name === tplName && t.language === lang);
+  } catch (err) {
+    // Listing can fail on permissions or rate limits; proceed to create blindly
+    // and let `createTemplate` surface the real error.
+    console.warn('[metaCloud] listTemplates during ensureOtpTemplate failed:', err.response?.data?.error?.message || err.message);
+  }
+
+  if (existing) {
+    return { status: existing.status, created: false, name: tplName, language: lang };
+  }
+
+  // 2. Create a fresh AUTHENTICATION template.
+  const components = [
+    { type: 'BODY', add_security_recommendation: true },
+    { type: 'FOOTER', code_expiration_minutes: codeExpirationMinutes },
+    {
+      type: 'BUTTONS',
+      buttons: [{ type: 'OTP', otp_type: 'COPY_CODE', text: 'Copy code' }],
+    },
+  ];
+  const result = await createTemplate({
+    name: tplName,
+    language: lang,
+    category: 'AUTHENTICATION',
+    components,
+  });
+  return { status: result.status, created: true, name: tplName, language: lang, id: result.id };
+}
+
+/**
  * Send the OTP code as a regular text message — only valid INSIDE the user's
  * 24-hour customer-service window (i.e. when they've messaged the bot in the
  * last 24 hours). Free of charge: no template, no per-conversation billing.
@@ -514,6 +561,7 @@ module.exports = {
   sendTemplate,
   sendOtpText,
   sendOtpTemplate,
+  ensureOtpTemplate,
   createFlow,
   updateFlowJSON,
   publishFlow,
