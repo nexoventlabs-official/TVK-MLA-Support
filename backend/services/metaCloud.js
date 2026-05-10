@@ -301,17 +301,32 @@ async function sendTemplate(to, { name, language, components = [] }) {
 }
 
 /**
- * Look for the portal OTP template on the WABA. If it doesn't exist, create
- * it as an AUTHENTICATION-category template (auto-approved by Meta because
- * the structure is fixed). Returns `{ status, created }` so callers can tell
- * whether the template is ready to send right now.
- *
- * AUTHENTICATION templates have a fixed body Meta generates itself — we just
- * pick whether to include the security-recommendation boilerplate ("do not
- * share this code with anyone") and the expiry footer.
+ * Body of the styled portal OTP template. Mirrors the free-form text version
+ * (`sendOtpText` above) so users see the same brand presentation whether
+ * they're inside the 24-hour window or not. The {{1}} placeholder is the
+ * 6-digit code; Meta substitutes it at delivery time.
  */
-async function ensureOtpTemplate({ name, language = 'en_US', codeExpirationMinutes = 5 } = {}) {
-  const tplName = name || process.env.META_OTP_TEMPLATE_NAME || 'tvk_portal_otp';
+const OTP_TEMPLATE_BODY =
+  '🔒 *TVK Mylapore Portal*\n\n' +
+  'Your verification code is:\n\n' +
+  '*{{1}}*\n\n' +
+  '⏱ Valid for 5 minutes.\n' +
+  '🚫 Do not share this code with anyone — not even our team.';
+
+/**
+ * Look for the portal OTP template on the WABA. If it doesn't exist, create
+ * it as a UTILITY-category template — UTILITY allows the styled, branded body
+ * shown in the WhatsApp client (matching the free-form text branch), while
+ * still supporting the native COPY_CODE button so the user can tap once to
+ * copy. AUTHENTICATION-category templates have an auto-generated body that
+ * can't be customised; we explicitly choose UTILITY to match the branding.
+ *
+ * UTILITY templates aren't auto-approved like AUTHENTICATION ones, but
+ * simple OTP-style content is normally approved within seconds to minutes.
+ * Returns `{ status, created }` so callers can react to PENDING approvals.
+ */
+async function ensureOtpTemplate({ name, language = 'en_US' } = {}) {
+  const tplName = name || process.env.META_OTP_TEMPLATE_NAME || 'tvk_portal_otp_styled';
   const lang = language || process.env.META_OTP_TEMPLATE_LANGUAGE || 'en_US';
 
   // 1. Look for an existing template with this name+language.
@@ -329,19 +344,27 @@ async function ensureOtpTemplate({ name, language = 'en_US', codeExpirationMinut
     return { status: existing.status, created: false, name: tplName, language: lang };
   }
 
-  // 2. Create a fresh AUTHENTICATION template.
+  // 2. Create a fresh UTILITY template with the branded body + copy-code button.
   const components = [
-    { type: 'BODY', add_security_recommendation: true },
-    { type: 'FOOTER', code_expiration_minutes: codeExpirationMinutes },
+    {
+      type: 'BODY',
+      text: OTP_TEMPLATE_BODY,
+      example: { body_text: [['123456']] },
+    },
     {
       type: 'BUTTONS',
-      buttons: [{ type: 'OTP', otp_type: 'COPY_CODE', text: 'Copy code' }],
+      buttons: [
+        {
+          type: 'COPY_CODE',
+          example: '123456',
+        },
+      ],
     },
   ];
   const result = await createTemplate({
     name: tplName,
     language: lang,
-    category: 'AUTHENTICATION',
+    category: 'UTILITY',
     components,
   });
   return { status: result.status, created: true, name: tplName, language: lang, id: result.id };
@@ -369,18 +392,19 @@ async function sendOtpText(to, code) {
 }
 
 /**
- * Send an Authentication-category template that delivers a 6-digit OTP code.
+ * Send the styled UTILITY-category template that delivers a 6-digit OTP code.
  *
- * Used when the user is OUTSIDE the 24-hour window (or has never messaged the
- * bot). The template (registered in Meta WABA Manager) is expected to have:
- *   - Category: AUTHENTICATION
- *   - One BODY parameter for the code: e.g. "Your TVK Mylapore portal code is {{1}}."
- *   - One BUTTON of sub-type OTP / COPY_CODE that takes {{1}} as the code parameter.
+ * Used when the user is OUTSIDE the 24-hour window (or has never messaged
+ * the bot). Mirrors the free-form text branding so the user sees the same
+ * "TVK Mylapore Portal" header in either path. The template body has one
+ * placeholder ({{1}}) for the code; the COPY_CODE button takes the same
+ * value as a `coupon_code` parameter, which renders as a one-tap copy
+ * button native to WhatsApp.
  *
  * The WhatsApp bot itself never invokes this helper — it's purely a portal path.
  */
 async function sendOtpTemplate(to, code) {
-  const name = process.env.META_OTP_TEMPLATE_NAME || 'tvk_portal_otp';
+  const name = process.env.META_OTP_TEMPLATE_NAME || 'tvk_portal_otp_styled';
   const language = process.env.META_OTP_TEMPLATE_LANGUAGE || 'en_US';
   const components = [
     {
@@ -389,9 +413,9 @@ async function sendOtpTemplate(to, code) {
     },
     {
       type: 'button',
-      sub_type: 'url',
+      sub_type: 'copy_code',
       index: '0',
-      parameters: [{ type: 'text', text: String(code) }],
+      parameters: [{ type: 'coupon_code', coupon_code: String(code) }],
     },
   ];
   return sendTemplate(to, { name, language, components });
