@@ -5,6 +5,7 @@ import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ServiceRequests from './pages/ServiceRequests.jsx';
+import ServiceRequestDetail from './pages/ServiceRequestDetail.jsx';
 import Members from './pages/Members.jsx';
 import MemberDetail from './pages/MemberDetail.jsx';
 import Voters from './pages/Voters.jsx';
@@ -56,6 +57,7 @@ function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="service-requests" element={<ServiceRequests />} />
+          <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
           <Route path="members" element={<Members />} />
           <Route path="members/:id" element={<MemberDetail />} />
           <Route path="voters" element={<Voters />} />
