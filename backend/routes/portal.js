@@ -41,6 +41,9 @@ const upload = require('../middleware/upload');
 const { uploadBuffer } = require('../services/cloudinary');
 const { generateTicketId } = require('../services/ticketing');
 const { sendOtpText, sendOtpTemplate, ensureOtpTemplate } = require('../services/metaCloud');
+const { sendOtpSms: sendOtpSmsTelesign } = require('../services/telesign');
+const { sendOtpSms: sendOtpSmsFast2SMS } = require('../services/fast2sms');
+const { sendOtpSms: sendOtpSmsTwoFactor } = require('../services/twofactor');
 const { SERVICES } = require('../services/serviceCatalog');
 const { getMap: getFlowImageMap } = require('../services/flowImages');
 const { getAction } = require('../services/issueActions');
@@ -133,26 +136,43 @@ function inboundActivityAt(member) {
 }
 
 /**
- * Choose the cheapest reliable channel and send the OTP.
+ * Choose the OTP delivery channel and send.
  *
- * - In-window users (lastInboundAt within 23 h) get a free-form text
- *   message. Free for the business since it's part of the open
- *   customer-service conversation. No native Copy code button — the OS's
- *   long-press-to-copy gesture on the bold code is the workaround.
- * - Out-of-window users get the AUTHENTICATION template (matches temp.png:
- *   "{{1}} is your verification code. For your security, do not share this
- *   code. This code expires in 5 minutes." with a real Copy code button).
+ * Provider is selected by env: OTP_PROVIDER (default 'fast2sms')
+ *   twofactor → 2Factor.in custom-OTP SMS. Real SMS to any Indian mobile,
+ *               default template works on free tier. ~₹0.15 per SMS.
+ *   fast2sms  → Fast2SMS Quick OTP route. Real SMS to any Indian mobile,
+ *               no DLT registration required. ~₹0.20 per SMS.
+ *   telesign  → TeleSign Verify SMS. Works globally; trial accounts are
+ *               restricted to pre-verified destination numbers.
+ *   whatsapp  → Legacy dual-path: free in-window text, paid template
+ *               out-of-window. `force: 'text' | 'template'` (admin-gated)
+ *               skips the auto-decision.
  *
- * `force` (admin-gated) is the testing escape hatch — pass 'text' or
- * 'template' to skip the auto-decision and exercise that channel directly.
- *
- * Returns `{ channel, meta, windowOpen, inboundAt }` so the route can log
- * Meta's accepted message id and the dispatcher's view of the recipient.
+ * Returns a uniform `{ provider, channel, meta, windowOpen, inboundAt }`
+ * shape so callers can log a single normalised record.
  */
 async function dispatchOtp(member, e164, code, { force } = {}) {
+  const provider = (process.env.OTP_PROVIDER || 'fast2sms').toLowerCase();
   const inboundAt = inboundActivityAt(member);
   const windowOpen = !!inboundAt && Date.now() - inboundAt.getTime() < WA_FREE_WINDOW_MS;
 
+  if (provider === 'twofactor' || provider === '2factor') {
+    const meta = await sendOtpSmsTwoFactor(e164, code);
+    return { provider: 'twofactor', channel: 'sms', meta, windowOpen, inboundAt };
+  }
+
+  if (provider === 'fast2sms') {
+    const meta = await sendOtpSmsFast2SMS(e164, code);
+    return { provider: 'fast2sms', channel: 'sms', meta, windowOpen, inboundAt };
+  }
+
+  if (provider === 'telesign') {
+    const meta = await sendOtpSmsTelesign(e164, code);
+    return { provider: 'telesign', channel: 'sms', meta, windowOpen, inboundAt };
+  }
+
+  // WhatsApp dual-path (legacy).
   let channel;
   if (force === 'text' || force === 'template') {
     channel = force;
@@ -162,10 +182,10 @@ async function dispatchOtp(member, e164, code, { force } = {}) {
 
   if (channel === 'text') {
     const meta = await sendOtpText(e164, code);
-    return { channel: 'text', meta, windowOpen, inboundAt };
+    return { provider: 'whatsapp', channel: 'text', meta, windowOpen, inboundAt };
   }
   const meta = await sendOtpTemplateWithSelfHeal(e164, code);
-  return { channel: 'template', meta, windowOpen, inboundAt };
+  return { provider: 'whatsapp', channel: 'template', meta, windowOpen, inboundAt };
 }
 
 /**
@@ -279,20 +299,26 @@ router.post('/auth/send-otp', async (req, res) => {
       metaResp = out.meta;
       dispatchInfo = out;
 
-      // Render-visible record of what Meta accepted so we can correlate
-      // delivery-webhook events later. wa_id should equal the input phone
-      // for valid WhatsApp users; if it's missing, the recipient isn't on
-      // WhatsApp and that explains a "200 OK but no message arrived".
+      // Provider-agnostic log line. For SMS providers (Fast2SMS, TeleSign),
+      // `messageId` is the provider's request_id / reference_id to query
+      // delivery status later. For WhatsApp, it's the wamid Meta accepted
+      // (correlates with delivery webhooks).
+      const messageId =
+        ['fast2sms', 'telesign', 'twofactor'].includes(out.provider)
+          ? metaResp?.referenceId || null
+          : metaResp?.messages?.[0]?.id || null;
       console.log('[portal] OTP dispatched:', {
         phone: e164,
         purpose: mode,
+        provider: out.provider,
         channel,
         forced: !!force,
         windowOpen: out.windowOpen,
         inboundAt: out.inboundAt,
-        messageId: metaResp?.messages?.[0]?.id || null,
+        messageId,
         waId: metaResp?.contacts?.[0]?.wa_id || null,
         recipientOnWhatsApp: !!metaResp?.contacts?.[0]?.wa_id,
+        telesignStatus: metaResp?.status || null,
       });
     } catch (err) {
       const meta = err.response?.data?.error;
@@ -330,11 +356,20 @@ router.post('/auth/send-otp', async (req, res) => {
       console.warn(`[portal] DEV ONLY — OTP for ${e164}: ${code}`);
     }
 
+    const provider = dispatchInfo?.provider || 'unknown';
+    const messageId =
+      ['fast2sms', 'telesign', 'twofactor'].includes(provider)
+        ? metaResp?.referenceId || null
+        : metaResp?.messages?.[0]?.id || null;
+
     const response = {
       ok: true,
       ttlSeconds: OTP_TTL_MS / 1000,
+      provider,
       channel,
-      messageId: metaResp?.messages?.[0]?.id || null,
+      messageId,
+      // Only meaningful for the WhatsApp provider; kept in the response for
+      // backward-compat with any older clients that read this field.
       recipientOnWhatsApp: metaResp?.contacts?.[0]?.wa_id ? true : false,
     };
     // Admin override: if the caller proves they hold the admin token, echo
