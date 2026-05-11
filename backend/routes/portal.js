@@ -43,6 +43,7 @@ const { generateTicketId } = require('../services/ticketing');
 const { sendOtpText, sendOtpTemplate, ensureOtpTemplate } = require('../services/metaCloud');
 const { SERVICES } = require('../services/serviceCatalog');
 const { getMap: getFlowImageMap } = require('../services/flowImages');
+const { getAction } = require('../services/issueActions');
 
 const router = express.Router();
 
@@ -566,12 +567,19 @@ router.get('/auth/diag', async (req, res) => {
  */
 router.get('/services', async (_req, res) => {
   try {
+    // Collect every FlowImage key the catalog references in one pass — service
+    // icons + banners, option icons, plus each option's per-action header and
+    // PDF keys (so the web flow can render the same header image the
+    // WhatsApp bot shows for that option's terminal action).
     const keys = [];
     for (const s of SERVICES) {
       if (s.iconKey) keys.push(s.iconKey);
       if (s.bannerKey) keys.push(s.bannerKey);
       for (const o of s.options) {
         if (o.iconKey) keys.push(o.iconKey);
+        const a = getAction(s.id, o.id);
+        if (a?.headerKey) keys.push(a.headerKey);
+        if (a?.pdfKey) keys.push(a.pdfKey);
       }
     }
     const urlMap = await getFlowImageMap(keys);
@@ -582,12 +590,27 @@ router.get('/services', async (_req, res) => {
       description: s.description,
       iconUrl: urlMap[s.iconKey] || '',
       bannerUrl: urlMap[s.bannerKey] || '',
-      options: s.options.map((o) => ({
-        id: o.id,
-        title: o.title,
-        description: o.description,
-        iconUrl: urlMap[o.iconKey] || '',
-      })),
+      options: s.options.map((o) => {
+        const a = getAction(s.id, o.id);
+        return {
+          id: o.id,
+          title: o.title,
+          description: o.description,
+          iconUrl: urlMap[o.iconKey] || '',
+          // The action object drives the web wizard's branching, the same
+          // way it drives the WhatsApp bot's webhook state-machine. Kinds:
+          // url | pdf | ticket | details_then_url | location_only_ticket |
+          // location_photos_ticket. Frontend defaults to 'ticket' if null.
+          action: a ? {
+            kind: a.kind,
+            url: a.url || '',
+            ctaLabel: a.ctaLabel || '',
+            minPhotos: a.minPhotos || 0,
+            headerUrl: urlMap[a.headerKey] || '',
+            pdfUrl: urlMap[a.pdfKey] || '',
+          } : null,
+        };
+      }),
     }));
 
     // Cheap to recompute but icons change rarely — let the browser hold the
@@ -689,7 +712,10 @@ router.get('/grievances/:ticketId', requireAuth, async (req, res) => {
  * POST /grievances — create a ticket from the web portal.
  * Multipart: optional `image` field. All other fields are strings on the body.
  *
- * Required: serviceId, optionId, description.
+ * Required: serviceId, optionId. Description is required for description-
+ *           style options (ticket, details_then_url) and auto-derived for
+ *           location-style options where the user never sees a text box.
+ *
  * Service / option titles are echoed from the client so we don't need a server-
  * side catalog (the same approach the WhatsApp flow takes).
  */
@@ -706,8 +732,29 @@ router.post('/grievances', requireAuth, upload.single('image'), async (req, res)
     if (!serviceId || !optionId) {
       return res.status(400).json({ error: 'serviceId and optionId are required' });
     }
-    if (!String(description).trim()) {
-      return res.status(400).json({ error: 'Please describe the issue' });
+
+    // Server-side action lookup tells us which path the user came through. For
+    // location-only / location+photo flows there is no description input on
+    // the web — fall back to "<option title> at <location>" so the admin
+    // dashboard always gets a non-empty body, mirroring how the WhatsApp bot
+    // labels these tickets.
+    const action = getAction(String(serviceId), String(optionId));
+    const isLocationFlow =
+      action && ['location_only_ticket', 'location_photos_ticket'].includes(action.kind);
+
+    let body = String(description || '').trim();
+    if (!body) {
+      if (isLocationFlow) {
+        body = location
+          ? `${optionTitle || 'Issue'} at ${location}`
+          : (optionTitle || 'Issue reported via web portal');
+      } else {
+        return res.status(400).json({ error: 'Please describe the issue' });
+      }
+    }
+
+    if (action?.kind === 'location_photos_ticket' && !req.file) {
+      return res.status(400).json({ error: 'A photo is required for this issue type' });
     }
 
     let mediaUrls = [];
@@ -732,7 +779,7 @@ router.post('/grievances', requireAuth, upload.single('image'), async (req, res)
       serviceTitle: String(serviceTitle),
       optionId: String(optionId),
       optionTitle: String(optionTitle),
-      description: String(description).trim().slice(0, 2000),
+      description: body.slice(0, 2000),
       location: String(location || ''),
       geo,
       mediaUrls,
