@@ -138,10 +138,8 @@ export default function LandingPage() {
       {/* Red on white: hero of the mid-page palette rhythm. The map card
           itself keeps a white surface so the GeoJSON renders legibly, but
           the surrounding section is maroon with white text + yellow accents. */}
-      <section className="py-20 bg-[#990000] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-72 h-72 bg-[#FFD700]/10 rounded-full -translate-y-1/3 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/3" />
-        <div className="max-w-6xl mx-auto px-6 relative z-10">
+      <section className="py-20 bg-[#990000]">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12 rv rv-up">
             <p className="text-[11px] font-bold text-[#FFD700] uppercase tracking-[4px] mb-3">
               Where We Serve
@@ -174,63 +172,57 @@ export default function LandingPage() {
 
             {/* Side panel — facts on yellow, CTA on dark wash of the section. */}
             <div className="rv rv-up lg:col-span-2 flex flex-col gap-4" data-d="2">
-              <div className="bg-[#FFD700] rounded-2xl p-6 shadow-xl shadow-black/20 relative overflow-hidden">
-                <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/30 rounded-full" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-[#990000] grid place-items-center">
-                      <Landmark className="w-5 h-5 text-[#FFD700]" />
-                    </div>
-                    <div>
-                      <h3 className="text-[15px] font-bold text-[#990000] leading-tight">
-                        Mylapore Constituency
-                      </h3>
-                      <p className="text-[11px] text-[#990000]/70 mt-0.5">
-                        Chennai district · Tamil Nadu
-                      </p>
-                    </div>
+              <div className="bg-[#FFD700] rounded-2xl p-6 shadow-xl shadow-black/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-[#990000] grid place-items-center">
+                    <Landmark className="w-5 h-5 text-[#FFD700]" />
                   </div>
-
-                  <dl className="space-y-0 text-xs">
-                    {[
-                      ['State', 'Tamil Nadu'],
-                      ['District', 'Chennai'],
-                      ['Constituency', 'Mylapore (AC 22)'],
-                      ['Population (approx.)', '3.2 lakh'],
-                      ['Wards covered', '15 (Z9 + Z10)'],
-                    ].map(([k, v]) => (
-                      <div
-                        key={k}
-                        className="flex justify-between py-2.5 border-b border-[#990000]/15 last:border-0"
-                      >
-                        <span className="text-[#990000]/60">{k}</span>
-                        <span className="font-semibold text-[#990000] text-right">{v}</span>
-                      </div>
-                    ))}
-                  </dl>
+                  <div>
+                    <h3 className="text-[15px] font-bold text-[#990000] leading-tight">
+                      Mylapore Constituency
+                    </h3>
+                    <p className="text-[11px] text-[#990000]/70 mt-0.5">
+                      Chennai district · Tamil Nadu
+                    </p>
+                  </div>
                 </div>
+
+                <dl className="space-y-0 text-xs">
+                  {[
+                    ['State', 'Tamil Nadu'],
+                    ['District', 'Chennai'],
+                    ['Constituency', 'Mylapore (AC 22)'],
+                    ['Population (approx.)', '3.2 lakh'],
+                    ['Wards covered', '15 (Z9 + Z10)'],
+                  ].map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="flex justify-between py-2.5 border-b border-[#990000]/15 last:border-0"
+                    >
+                      <span className="text-[#990000]/60">{k}</span>
+                      <span className="font-semibold text-[#990000] text-right">{v}</span>
+                    </div>
+                  ))}
+                </dl>
               </div>
 
-              <div className="bg-white text-[#990000] rounded-2xl p-6 shadow-xl shadow-black/20 relative overflow-hidden ring-2 ring-[#FFD700]/40">
-                <div className="absolute -bottom-10 -left-10 w-28 h-28 bg-[#FFD700]/20 rounded-full" />
-                <div className="relative z-10">
-                  <p className="text-[10px] font-bold uppercase tracking-[3px] text-[#FFD700] mb-2">
-                    Direct to MLA
-                  </p>
-                  <h4 className="text-lg font-bold leading-tight text-[#990000]">
-                    Every grievance lands on the MLA's desk within 24 hours.
-                  </h4>
-                  <p className="text-[12px] text-[#990000]/70 mt-2 leading-relaxed">
-                    Tickets are tagged with your ward, geo-pinned and tracked end-to-end.
-                  </p>
-                  <button
-                    onClick={() => go(user ? '/grievance' : '/register')}
-                    className="mt-5 inline-flex items-center gap-2 bg-[#990000] text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-[#7a0000] transition-colors"
-                  >
-                    {user ? 'File a Grievance' : 'Register Now'}{' '}
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              <div className="bg-white text-[#990000] rounded-2xl p-6 shadow-xl shadow-black/20 ring-2 ring-[#FFD700]/40">
+                <p className="text-[10px] font-bold uppercase tracking-[3px] text-[#FFD700] mb-2">
+                  Direct to MLA
+                </p>
+                <h4 className="text-lg font-bold leading-tight text-[#990000]">
+                  Every grievance lands on the MLA's desk within 24 hours.
+                </h4>
+                <p className="text-[12px] text-[#990000]/70 mt-2 leading-relaxed">
+                  Tickets are tagged with your ward, geo-pinned and tracked end-to-end.
+                </p>
+                <button
+                  onClick={() => go(user ? '/grievance' : '/register')}
+                  className="mt-5 inline-flex items-center gap-2 bg-[#990000] text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-[#7a0000] transition-colors"
+                >
+                  {user ? 'File a Grievance' : 'Register Now'}{' '}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           </div>
@@ -271,10 +263,8 @@ export default function LandingPage() {
       {/* ═══════ INFO GRID ═══════ */}
       {/* Maroon band with translucent glass cards — white text everywhere,
           yellow used only for accents (icons, divider dots, contact pills). */}
-      <section className="py-16 bg-[#990000] relative overflow-hidden">
-        <div className="absolute -top-16 -left-16 w-56 h-56 bg-[#FFD700]/10 rounded-full" />
-        <div className="absolute -bottom-20 right-0 w-72 h-72 bg-white/5 rounded-full" />
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-6 relative z-10">
+      <section className="py-16 bg-[#990000]">
+        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-6">
 
           {/* Announcements */}
           <div className="rv rv-left bg-white/10 backdrop-blur-sm rounded-2xl p-6 ring-1 ring-white/15">
@@ -345,10 +335,8 @@ export default function LandingPage() {
 
       {/* ═══════ CTA ═══════ */}
       {/* Yellow closing band — final yellow beat in the red ↔ yellow rhythm. */}
-      <section className="py-16 bg-[#FFD700] text-[#990000] rv rv-up relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-60 h-60 bg-white/30 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#990000]/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-        <div className="max-w-2xl mx-auto px-6 text-center relative z-10">
+      <section className="py-16 bg-[#FFD700] text-[#990000] rv rv-up">
+        <div className="max-w-2xl mx-auto px-6 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4 text-[#990000]">{t('ctaTitle')}</h2>
           <p className="text-sm text-[#990000]/80 mb-8 max-w-md mx-auto leading-relaxed">
             {t('ctaDesc')}
