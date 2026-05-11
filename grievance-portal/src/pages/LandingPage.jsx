@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { ShieldCheck, UserPlus, Search, ArrowRight, MapPin, FileText, Eye, Phone, Mail, Globe, ChevronRight, AlertCircle, CheckCircle2, Timer, Users } from 'lucide-react'
+import { ShieldCheck, UserPlus, Search, ArrowRight, MapPin, FileText, Eye, Phone, Mail, Globe, ChevronRight, AlertCircle, CheckCircle2, Timer, Users, Landmark } from 'lucide-react'
+import TamilNaduMap from '../components/TamilNaduMap'
 import { useLang } from '../i18n'
 import { useAuth } from '../lib/auth'
 import api from '../lib/api'
@@ -192,6 +193,100 @@ export default function LandingPage() {
                 <p className="text-xs text-gray-400 leading-relaxed">{s.d}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ LOCATION / TN MAP ═══════ */}
+      <section className="py-20 bg-gray-50/70">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12 rv rv-up">
+            <p className="text-[11px] font-bold text-saffron uppercase tracking-[4px] mb-3">
+              Where We Serve
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold font-serif text-navy">
+              Mylapore in Tamil Nadu
+            </h2>
+            <div className="section-line mx-auto mt-4" />
+          </div>
+
+          <div className="grid lg:grid-cols-5 gap-6 items-stretch">
+            {/* Map card — spans 3/5 on desktop so the highlight is the
+                clear hero of the section without crowding the side panel. */}
+            <div className="rv rv-up lg:col-span-3 bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-navy">Tamil Nadu District Map</h3>
+                <span className="inline-flex items-center gap-2 text-[11px] font-semibold text-[#990000]">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#990000] ring-2 ring-[#FFD700]" />
+                  Chennai (Mylapore)
+                </span>
+              </div>
+              <div className="w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden bg-gray-50 relative">
+                <TamilNaduMap highlightedDistrict="CHENNAI" />
+              </div>
+              <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+                Mylapore is one of 16 assembly constituencies in Chennai district. Hover any
+                district to view its name.
+              </p>
+            </div>
+
+            {/* Side panel — quick facts about the constituency footprint */}
+            <div className="rv rv-up lg:col-span-2 flex flex-col gap-4" data-d="2">
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-[#990000]/5 grid place-items-center">
+                    <Landmark className="w-5 h-5 text-[#990000]" />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-bold text-navy leading-tight">
+                      Mylapore Constituency
+                    </h3>
+                    <p className="text-[11px] text-gray-500 mt-0.5">Chennai district · Tamil Nadu</p>
+                  </div>
+                </div>
+
+                <dl className="space-y-0 text-xs">
+                  {[
+                    ['State', 'Tamil Nadu'],
+                    ['District', 'Chennai'],
+                    ['Constituency', 'Mylapore (AC 22)'],
+                    ['Population (approx.)', '3.2 lakh'],
+                    ['Wards covered', '15 (Z9 + Z10)'],
+                  ].map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="flex justify-between py-2.5 border-b border-gray-50 last:border-0"
+                    >
+                      <span className="text-gray-400">{k}</span>
+                      <span className="font-semibold text-navy text-right">{v}</span>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              <div className="bg-gradient-to-br from-[#990000] to-[#7a0000] text-white rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                <div className="absolute -top-8 -right-8 w-32 h-32 bg-[#FFD700]/10 rounded-full" />
+                <div className="absolute -bottom-10 -left-10 w-28 h-28 bg-white/5 rounded-full" />
+                <div className="relative z-10">
+                  <p className="text-[10px] font-bold uppercase tracking-[3px] text-[#FFD700] mb-2">
+                    Direct to MLA
+                  </p>
+                  <h4 className="text-lg font-bold leading-tight">
+                    Every grievance lands on the MLA's desk within 24 hours.
+                  </h4>
+                  <p className="text-[12px] text-white/70 mt-2 leading-relaxed">
+                    Tickets are tagged with your ward, geo-pinned and tracked end-to-end.
+                  </p>
+                  <button
+                    onClick={() => go(user ? '/grievance' : '/register')}
+                    className="mt-5 inline-flex items-center gap-2 bg-[#FFD700] text-black px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-[#FFD700]/90 transition-colors"
+                  >
+                    {user ? 'File a Grievance' : 'Register Now'}{' '}
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
