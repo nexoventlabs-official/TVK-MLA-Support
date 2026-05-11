@@ -57,6 +57,9 @@ export default function Topbar() {
 
   const overlay = isLanding && !scrolled
 
+  // Signed-out visitors only see brand + Log In / Register on the right;
+  // the Home link is redundant for them (they're already on it) so we
+  // suppress nav items entirely until they authenticate.
   const navItems = user
     ? [
         { to: '/',              label: 'Home',         Icon: Home },
@@ -64,9 +67,7 @@ export default function Topbar() {
         { to: '/my-grievances', label: 'My Requests',  Icon: Eye },
         { to: '/track',         label: 'Track',        Icon: Search },
       ]
-    : [
-        { to: '/',              label: 'Home',         Icon: Home },
-      ]
+    : []
 
   const initial = (user?.name || user?.phone || 'U').charAt(0).toUpperCase()
 
