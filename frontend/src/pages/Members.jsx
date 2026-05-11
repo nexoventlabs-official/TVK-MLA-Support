@@ -1,23 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Phone,
   Clock,
   MessageCircle,
-  ChevronRight,
   ShieldCheck,
   IdCard,
   Inbox,
+  Ticket,
 } from 'lucide-react';
 import api from '../api';
-
-const STATUS_COLORS = {
-  new: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/60',
-  in_progress: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/60',
-  resolved: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60',
-  rejected: 'bg-brand-100 text-brand-600 ring-1 ring-brand-200',
-};
 
 const FILTERS = [
   { id: 'registered', label: 'Registered' },
@@ -25,6 +18,7 @@ const FILTERS = [
 ];
 
 export default function Members() {
+  const navigate = useNavigate();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
@@ -141,23 +135,43 @@ export default function Members() {
                   <th className="px-6 py-4 text-left">WhatsApp</th>
                   <th className="px-6 py-4 text-left">Status</th>
                   <th className="px-6 py-4 text-left">Age</th>
-                  <th className="px-6 py-4 text-left">Issues Raised</th>
+                  <th className="px-6 py-4 text-left">Requests</th>
                   <th className="px-6 py-4 text-left">Last Seen</th>
-                  <th className="px-6 py-4"></th>
                 </tr>
               </thead>
+              {/*
+                Each row is a single click target: clicking ANY cell navigates
+                to /members/:id. We keep semantics tidy by attaching `onClick`
+                to the <tr> directly + a keyboard-friendly fallback (Enter /
+                Space) so the whole row behaves like a link, not just the
+                old chevron column.
+              */}
               <tbody className="divide-y divide-gray-100/50">
                 {members.map((m) => {
                   const display = m.name || m.profileName || '—';
+                  const goToDetail = () => navigate(`/members/${m._id}`);
                   return (
-                    <tr key={m._id} className="hover:bg-gray-50/50 align-top transition-colors">
+                    <tr
+                      key={m._id}
+                      onClick={goToDetail}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          goToDetail();
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Open details for ${display}`}
+                      className="cursor-pointer hover:bg-brand-50/40 focus:bg-brand-50/60 focus:outline-none align-middle transition-colors"
+                    >
                       <td className="px-6 py-4">
-                        <Link to={`/members/${m._id}`} className="flex items-center gap-3 group">
+                        <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-medium shrink-0">
                             {display[0]?.toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-medium group-hover:text-brand-700 truncate">
+                            <div className="font-medium text-brand-900 truncate">
                               {display}
                             </div>
                             {m.epicNo && (
@@ -166,7 +180,7 @@ export default function Members() {
                               </div>
                             )}
                           </div>
-                        </Link>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 text-gray-700">
@@ -194,39 +208,19 @@ export default function Members() {
                       <td className="px-6 py-4 whitespace-nowrap text-gray-700 font-medium">
                         {m.age != null ? `${m.age} yrs` : '—'}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {/*
+                          Request count only — no per-issue chips here. Full
+                          issue list (with photos, location, status) lives on
+                          the member detail page.
+                        */}
                         {m.requestCount ? (
-                          <div className="space-y-1.5 max-w-md">
-                            <div className="text-xs text-gray-500">
-                              <strong className="text-brand-700">{m.requestCount}</strong> total
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {(m.recentIssues || []).map((it) => (
-                                <span
-                                  key={it._id}
-                                  className={`pill text-[11px] ${
-                                    STATUS_COLORS[it.status] || 'bg-gray-100 text-gray-700'
-                                  }`}
-                                  title={`${it.serviceTitle} · ${new Date(
-                                    it.createdAt
-                                  ).toLocaleString()}`}
-                                >
-                                  {it.optionTitle}
-                                </span>
-                              ))}
-                              {m.requestCount > (m.recentIssues || []).length && (
-                                <Link
-                                  to={`/members/${m._id}`}
-                                  className="pill text-[11px] bg-brand-50 text-brand-700 ring-1 ring-brand-200 hover:bg-brand-100"
-                                >
-                                  +{m.requestCount - m.recentIssues.length} more
-                                </Link>
-                              )}
-                            </div>
-                          </div>
+                          <span className="inline-flex items-center gap-1.5 pill bg-brand-900 text-white ring-1 ring-brand-900 font-mono">
+                            <Ticket size={12} /> {m.requestCount}
+                          </span>
                         ) : (
                           <span className="text-xs text-gray-400 inline-flex items-center gap-1">
-                            <Inbox size={12} /> No issues
+                            <Inbox size={12} /> 0
                           </span>
                         )}
                       </td>
@@ -234,14 +228,6 @@ export default function Members() {
                         <span className="inline-flex items-center gap-1">
                           <Clock size={14} /> {new Date(m.lastSeenAt).toLocaleString()}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link
-                          to={`/members/${m._id}`}
-                          className="text-brand-700 hover:bg-brand-50 p-2 rounded-md inline-flex"
-                        >
-                          <ChevronRight size={16} />
-                        </Link>
                       </td>
                     </tr>
                   );
