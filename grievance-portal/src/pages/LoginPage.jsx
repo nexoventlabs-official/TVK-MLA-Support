@@ -13,7 +13,7 @@ export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const fromPath = location.state?.from?.pathname || '/grievance'
+  const fromPath = location.state?.from?.pathname || '/'
 
   const [step, setStep] = useState(1)            // 1 = phone, 2 = otp
   const [phone, setPhone] = useState('')
@@ -134,7 +134,7 @@ export default function LoginPage() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     className="block w-full px-4 py-3.5 bg-transparent text-gray-800 font-bold focus:outline-none"
-                    placeholder="810"
+                    placeholder="10-digt number"
                     required
                     autoFocus
                   />
@@ -147,7 +147,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy || phone.length !== 10}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:bg-[#E5C77A] disabled:text-[#806B3E] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send OTP'}
               </button>
@@ -196,7 +196,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy || otp.length !== 6}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:bg-[#E5C77A] disabled:text-[#806B3E] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Sign In'}
               </button>

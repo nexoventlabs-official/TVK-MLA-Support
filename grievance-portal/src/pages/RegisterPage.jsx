@@ -161,7 +161,7 @@ export default function RegisterPage() {
       }
       const { data } = await api.post('/portal/auth/register', payload)
       login(data.token, data.user)
-      navigate('/grievance', { replace: true })
+      navigate('/', { replace: true })
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed')
     } finally {
@@ -247,7 +247,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:bg-[#E5C77A] disabled:text-[#806B3E] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm mt-4"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm mt-4"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue'}
               </button>
@@ -275,7 +275,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:bg-[#E5C77A] disabled:text-[#806B3E] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm mt-4"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm mt-4"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue'}
               </button>
@@ -353,7 +353,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={requestOtp}
                 disabled={busy}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:bg-[#E5C77A] disabled:text-[#806B3E] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm & Send OTP'}
               </button>
@@ -429,7 +429,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={busy || otp.length !== 6}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:bg-[#E5C77A] disabled:text-[#806B3E] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Create Account'}
               </button>
