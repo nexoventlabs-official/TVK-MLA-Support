@@ -134,69 +134,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════ SERVICES ═══════ */}
-      <section className="py-20 bg-gray-50/70">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-14 rv rv-up">
-            <p className="text-[11px] font-bold text-saffron uppercase tracking-[4px] mb-3">{t('whatYouCanDo')}</p>
-            <h2 className="text-2xl md:text-3xl font-bold font-serif text-navy">{t('ourServices')}</h2>
-            <div className="section-line mx-auto mt-4" />
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { Icon: FileText, title: t('fileGrievance'), desc: t('fileGrievanceDesc'), color: 'navy', to: '/grievance' },
-              { Icon: Search, title: t('trackStatus'), desc: t('trackStatusDesc'), color: 'tvk-green', to: '/track' },
-              { Icon: Eye, title: t('viewResponse'), desc: t('viewResponseDesc'), color: 'saffron', to: '/my-grievances' },
-            ].map((s, i) => (
-              <div key={i} className={`rv rv-up bg-white rounded-2xl p-7 border border-gray-100 cursor-pointer group lift`} data-d={i + 1} onClick={() => go(s.to)}>
-                <div className={`icon-box w-14 h-14 rounded-2xl bg-${s.color}/5 flex items-center justify-center mb-5 group-hover:bg-${s.color} group-hover:shadow-lg`}>
-                  <s.Icon className={`w-6 h-6 text-${s.color} group-hover:text-white transition-colors`} />
-                </div>
-                <h3 className="font-bold text-navy text-lg mb-2">{s.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed mb-5">{s.desc}</p>
-                <span className="inline-flex items-center text-xs font-semibold text-navy group-hover:text-saffron transition-colors">
-                  {t('getStarted')} <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════ HOW IT WORKS ═══════ */}
-      <section className="py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-14 rv rv-up">
-            <p className="text-[11px] font-bold text-saffron uppercase tracking-[4px] mb-3">{t('simpleProcess')}</p>
-            <h2 className="text-2xl md:text-3xl font-bold font-serif text-navy">{t('howItWorks')}</h2>
-            <div className="section-line mx-auto mt-4" />
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-6">
-            {[
-              { n: '01', Icon: ShieldCheck, t: t('step1'), d: t('step1Desc') },
-              { n: '02', Icon: FileText, t: t('step2'), d: t('step2Desc') },
-              { n: '03', Icon: MapPin, t: t('step3'), d: t('step3Desc') },
-              { n: '04', Icon: CheckCircle2, t: t('step4'), d: t('step4Desc') },
-            ].map((s, i) => (
-              <div key={i} className="rv rv-up text-center" data-d={i + 1}>
-                <div className="relative inline-block mb-5">
-                  <div className="w-18 h-18 w-[72px] h-[72px] rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mx-auto">
-                    <s.Icon className="w-7 h-7 text-navy" />
-                  </div>
-                  <span className="absolute -top-2.5 -right-2.5 w-7 h-7 rounded-full bg-navy text-white text-[11px] font-bold flex items-center justify-center shadow-md">
-                    {s.n}
-                  </span>
-                </div>
-                <h4 className="font-bold text-sm text-navy mb-1">{s.t}</h4>
-                <p className="text-xs text-gray-400 leading-relaxed">{s.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ═══════ LOCATION / TN MAP ═══════ */}
       <section className="py-20 bg-gray-50/70">
         <div className="max-w-6xl mx-auto px-6">
