@@ -88,7 +88,11 @@ export default function LandingPage() {
               <div className="hero-anim hero-anim-d3 flex flex-wrap gap-3 mt-8">
                 {user ? (
                   <>
-                    <button onClick={() => go('/grievance')} className="bg-[#FFD700] text-black px-8 py-3.5 rounded-xl text-sm font-bold flex items-center gap-2.5 lift hover:bg-[#FFD700]/90 transition-colors shadow-lg shadow-[#FFD700]/20">
+                    <button 
+                      onClick={() => go('/grievance')} 
+                      style={{ WebkitMaskImage: "url('/button.png')", maskImage: "url('/button.png')", WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat" }}
+                      className="bg-[#FFD700] text-[#990000] px-10 py-4 text-sm font-extrabold flex items-center justify-center gap-2.5 lift hover:bg-[#FFD700]/90 transition-colors drop-shadow-lg"
+                    >
                       <FileText className="w-4 h-4" /> File a Grievance
                     </button>
                     <button onClick={() => go('/my-grievances')} className="bg-white/10 border border-white/20 backdrop-blur-sm text-white px-8 py-3.5 rounded-xl text-sm font-semibold flex items-center gap-2.5 lift hover:bg-white/20 transition-colors shadow-lg shadow-black/10">
@@ -97,241 +101,101 @@ export default function LandingPage() {
                   </>
                 ) : (
                   <>
-                    <button onClick={() => go('/login')} className="bg-[#FFD700] text-black px-8 py-3.5 rounded-xl text-sm font-bold flex items-center gap-2.5 lift hover:bg-[#FFD700]/90 transition-colors shadow-lg shadow-[#FFD700]/20">
+                    <button 
+                      onClick={() => go('/login')} 
+                      style={{ WebkitMaskImage: "url('/button.png')", maskImage: "url('/button.png')", WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat" }}
+                      className="bg-[#FFD700] text-[#990000] px-10 py-4 text-sm font-extrabold flex items-center justify-center gap-2.5 lift hover:bg-[#FFD700]/90 transition-colors drop-shadow-lg"
+                    >
                       <UserPlus className="w-4 h-4" /> Log In
                     </button>
-                    <button onClick={() => go('/register')} className="bg-white/10 border border-white/20 backdrop-blur-sm text-white px-8 py-3.5 rounded-xl text-sm font-semibold flex items-center gap-2.5 lift hover:bg-white/20 transition-colors shadow-lg shadow-black/10">
+                    <button 
+                      onClick={() => go('/register')} 
+                      style={{ WebkitMaskImage: "url('/button.png')", maskImage: "url('/button.png')", WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat" }}
+                      className="bg-[#FFD700] text-[#990000] px-10 py-4 text-sm font-extrabold flex items-center justify-center gap-2.5 lift hover:bg-[#FFD700]/90 transition-colors drop-shadow-lg"
+                    >
                       Register Now <ArrowRight className="w-4 h-4" />
                     </button>
                   </>
                 )}
               </div>
 
-              {/* Mini stats */}
-              <div className="hero-anim hero-anim-d4 flex gap-8 mt-10 pt-8 border-t border-white/20">
-                {[
-                  { n: stats.totalReceived, l: t('received') },
-                  { n: stats.totalResolved, l: t('resolved') },
-                  { n: stats.avgResponseTime, l: t('avgResponse') },
-                ].map((s, i) => (
-                  <div key={i}>
-                    <div className="text-xl font-extrabold text-white leading-none">{s.n}</div>
-                    <div className="text-[10px] text-white/60 uppercase tracking-widest mt-1">{s.l}</div>
-                  </div>
-                ))}
-              </div>
+
             </div>
 
             {/* Right — Image */}
             <div className="img-reveal relative flex justify-center items-end mt-8 lg:mt-0">
-              <div className="relative w-full max-w-md">
-                <img src="/mla.png" alt="MLA Venkatramanan" className="w-full h-auto block drop-shadow-[0_20px_20px_rgba(0,0,0,0.5)] transform translate-y-4 md:translate-y-8" />
-              </div>
-
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════ LOCATION / TN MAP ═══════ */}
-      {/* Red on white: hero of the mid-page palette rhythm. The map card
-          itself keeps a white surface so the GeoJSON renders legibly, but
-          the surrounding section is maroon with white text + yellow accents. */}
-      <section className="py-20 bg-[#990000]">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-12 rv rv-up">
-            <p className="text-[11px] font-bold text-[#FFD700] uppercase tracking-[4px] mb-3">
-              Where We Serve
-            </p>
-            <h2 className="text-2xl md:text-3xl font-bold font-serif text-white">
-              Mylapore in Tamil Nadu
-            </h2>
-            <div className="w-16 h-[3px] bg-[#FFD700] mx-auto mt-4 rounded-full" />
-          </div>
-
-          <div className="grid lg:grid-cols-5 gap-6 items-stretch">
-            {/* Map card — white interior so the map renders properly. The
-                yellow ring + frame ties it back into the palette. */}
-            <div className="rv rv-up lg:col-span-3 bg-white rounded-2xl ring-2 ring-[#FFD700]/40 p-4 sm:p-6 shadow-xl shadow-black/20">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-[#990000]">Tamil Nadu District Map</h3>
-                <span className="inline-flex items-center gap-2 text-[11px] font-semibold text-[#990000]">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-[#990000] ring-2 ring-[#FFD700]" />
-                  Chennai (Mylapore)
-                </span>
-              </div>
-              <div className="w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden bg-gray-50 relative">
-                <TamilNaduMap highlightedDistrict="CHENNAI" />
-              </div>
-              <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
-                Mylapore is one of 16 assembly constituencies in Chennai district. Hover any
-                district to view its name.
-              </p>
-            </div>
-
-            {/* Side panel — facts on yellow, CTA on dark wash of the section. */}
-            <div className="rv rv-up lg:col-span-2 flex flex-col gap-4" data-d="2">
-              <div className="bg-[#FFD700] rounded-2xl p-6 shadow-xl shadow-black/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-[#990000] grid place-items-center">
-                    <Landmark className="w-5 h-5 text-[#FFD700]" />
-                  </div>
-                  <div>
-                    <h3 className="text-[15px] font-bold text-[#990000] leading-tight">
-                      Mylapore Constituency
-                    </h3>
-                    <p className="text-[11px] text-[#990000]/70 mt-0.5">
-                      Chennai district · Tamil Nadu
-                    </p>
-                  </div>
-                </div>
-
-                <dl className="space-y-0 text-xs">
-                  {[
-                    ['State', 'Tamil Nadu'],
-                    ['District', 'Chennai'],
-                    ['Constituency', 'Mylapore (AC 22)'],
-                    ['Population (approx.)', '3.2 lakh'],
-                    ['Wards covered', '15 (Z9 + Z10)'],
-                  ].map(([k, v]) => (
-                    <div
-                      key={k}
-                      className="flex justify-between py-2.5 border-b border-[#990000]/15 last:border-0"
-                    >
-                      <span className="text-[#990000]/60">{k}</span>
-                      <span className="font-semibold text-[#990000] text-right">{v}</span>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              <div className="bg-white text-[#990000] rounded-2xl p-6 shadow-xl shadow-black/20 ring-2 ring-[#FFD700]/40">
-                <p className="text-[10px] font-bold uppercase tracking-[3px] text-[#FFD700] mb-2">
-                  Direct to MLA
-                </p>
-                <h4 className="text-lg font-bold leading-tight text-[#990000]">
-                  Every grievance lands on the MLA's desk within 24 hours.
-                </h4>
-                <p className="text-[12px] text-[#990000]/70 mt-2 leading-relaxed">
-                  Tickets are tagged with your ward, geo-pinned and tracked end-to-end.
-                </p>
-                <button
-                  onClick={() => go(user ? '/grievance' : '/register')}
-                  className="mt-5 inline-flex items-center gap-2 bg-[#990000] text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-[#7a0000] transition-colors"
-                >
-                  {user ? 'File a Grievance' : 'Register Now'}{' '}
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+              <div className="relative w-full max-w-md transform -translate-y-6 md:-translate-y-10">
+                <img 
+                  src="/cta-bg-1-1.png" 
+                  alt="" 
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] md:w-[220%] max-w-none z-0 pointer-events-none"
+                />
+                <img src="/mla.png" alt="MLA Venkatramanan" className="relative z-10 w-full h-auto block drop-shadow-[0_20px_20px_rgba(0,0,0,0.5)]" />
               </div>
             </div>
+
           </div>
         </div>
       </section>
 
       {/* ═══════ STATS BAR ═══════ */}
-      {/* Yellow band — counter-rhythm to the maroon TN-Map section above
-          and the maroon Info Grid below. Forced to red text for legibility
-          (white-on-yellow fails contrast outright). */}
-      <section className="bg-[#FFD700] py-12 rv rv-up">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { v: stats.totalReceived, l: t('totalReceived'), Icon: FileText },
-              { v: stats.totalResolved, l: t('totalResolved'), Icon: CheckCircle2 },
-              { v: stats.avgResponseTime, l: t('responseTime'), Icon: Timer },
-              { v: stats.satisfaction, l: t('satisfaction'), Icon: Users },
-            ].map((s, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-[#990000] flex items-center justify-center flex-shrink-0 shadow-md shadow-black/10">
-                  <s.Icon className="w-5 h-5 text-[#FFD700]" />
-                </div>
-                <div>
-                  <div className="text-2xl md:text-3xl font-extrabold leading-none text-[#990000]">
-                    {s.v}
-                  </div>
-                  <div className="text-[10px] text-[#990000]/70 uppercase tracking-widest mt-1 font-semibold">
-                    {s.l}
-                  </div>
-                </div>
-              </div>
-            ))}
+      <section className="bg-[#FFD700] py-8 relative z-20 shadow-[0_10px_30px_rgba(0,0,0,0.1)] rv rv-up">
+        <div className="max-w-6xl mx-auto px-6 flex flex-wrap justify-center gap-12 md:gap-32">
+          {[
+            { n: stats.totalReceived, l: t('received') },
+            { n: stats.totalResolved, l: t('resolved') },
+            { n: stats.avgResponseTime, l: t('avgResponse') },
+          ].map((s, i) => (
+            <div key={i} className="text-center">
+              <div className="text-4xl font-extrabold text-[#990000] leading-none mb-2 drop-shadow-sm">{s.n}</div>
+              <div className="text-xs text-[#990000]/80 font-bold uppercase tracking-widest">{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════ LOCATION / TN MAP ═══════ */}
+      <section className="relative py-20 overflow-hidden">
+        <img 
+          alt="Districts background" 
+          decoding="async"
+          className="object-cover absolute inset-0 w-full h-full z-0"
+          style={{ color: 'transparent' }}
+          src="/bg-lap.png" 
+        />
+        {/* Dark red overlay for text contrast and blending */}
+        <div className="absolute inset-0 bg-[#990000]/85 z-0 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-[#990000]/60 z-0" />
+        
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <div className="mb-8 rv rv-up">
+            <h2 className="text-4xl md:text-[3.5rem] font-black text-white tracking-tight drop-shadow-md font-sans uppercase" style={{ fontFamily: 'Impact, sans-serif' }}>
+              District Structure
+            </h2>
+          </div>
+
+          <div className="relative border-2 border-white rounded-[2rem] p-6 md:p-10 min-h-[450px] md:min-h-[550px] flex items-center justify-center shadow-2xl bg-transparent rv rv-up">
+            
+            {/* Main TN Map */}
+            <div className="w-full md:w-[80%] lg:w-[70%] h-[350px] md:h-[450px] relative pointer-events-auto z-10">
+               <TamilNaduMap 
+                 highlightedDistrict="CHENNAI" 
+                 baseFill="#ffffff"
+                 baseColor="#990000"
+                 baseOpacity={1}
+                 hoverFill="#fef08a"
+                 highlightFill="#FFD700"
+                 highlightColor="#990000"
+                 highlightOpacity={1}
+                 zoom={6.8}
+                 center={[10.9, 78.4]}
+               />
+            </div>
+
           </div>
         </div>
       </section>
 
-      {/* ═══════ INFO GRID ═══════ */}
-      {/* Maroon band with translucent glass cards — white text everywhere,
-          yellow used only for accents (icons, divider dots, contact pills). */}
-      <section className="py-16 bg-[#990000]">
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-6">
-
-          {/* Announcements */}
-          <div className="rv rv-left bg-white/10 backdrop-blur-sm rounded-2xl p-6 ring-1 ring-white/15">
-            <h3 className="font-bold text-sm text-white mb-5 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-[#FFD700]" /> {t('announcements')}
-            </h3>
-            <ul className="space-y-3.5">
-              {[
-                { t: t('ann1'), d: '05 May 2026' },
-                { t: t('ann2'), d: '03 May 2026' },
-                { t: t('ann3'), d: '28 Apr 2026' },
-              ].map((a, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-xs text-white/85 pb-3 border-b border-white/10 last:border-0 last:pb-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] mt-1.5 flex-shrink-0" />
-                  <div>
-                    <p className="leading-relaxed">{a.t}</p>
-                    <p className="text-[10px] text-white/50 mt-0.5">{a.d}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Constituency */}
-          <div className="rv rv-up bg-white/10 backdrop-blur-sm rounded-2xl p-6 ring-1 ring-white/15" data-d="2">
-            <h3 className="font-bold text-sm text-white mb-5 flex items-center gap-2">
-              <Globe className="w-4 h-4 text-[#FFD700]" /> {t('constituencyInfo')}
-            </h3>
-            <div className="space-y-0 text-xs">
-              {[
-                [t('infoConstituency'), t('infoConstVal')],
-                [t('infoDistrict'), t('infoDistVal')],
-                [t('infoMLA'), t('infoMLAVal')],
-                [t('infoParty'), t('infoPartyVal')],
-                [t('infoTerm'), t('infoTermVal')],
-              ].map(([k, v], i) => (
-                <div key={i} className="flex justify-between py-2.5 border-b border-white/10 last:border-0">
-                  <span className="text-white/60">{k}</span>
-                  <span className="font-semibold text-white">{v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div className="rv rv-right bg-white/10 backdrop-blur-sm rounded-2xl p-6 ring-1 ring-white/15" data-d="3">
-            <h3 className="font-bold text-sm text-white mb-5 flex items-center gap-2">
-              <Phone className="w-4 h-4 text-[#FFD700]" /> {t('contactUs')}
-            </h3>
-            <div className="space-y-3">
-              {[
-                { Icon: Phone, t: '1800-XXX-XXXX', d: t('tollFree') },
-                { Icon: Mail, t: 'mla.mylapore@tn.gov.in', d: t('emailSupport') },
-                { Icon: MapPin, t: t('mlaOffice'), d: t('officeHours') },
-              ].map((c, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl text-xs ring-1 ring-white/10">
-                  <c.Icon className="w-4 h-4 text-[#FFD700] flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-white">{c.t}</p>
-                    <p className="text-[10px] text-white/60">{c.d}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ═══════ CTA ═══════ */}
       {/* Yellow closing band — final yellow beat in the red ↔ yellow rhythm. */}
@@ -344,7 +208,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap justify-center gap-3">
             <button
               onClick={() => go('/grievance')}
-              className="bg-[#990000] text-white px-7 py-3.5 rounded-xl text-sm font-bold lift hover:bg-[#7a0000] flex items-center gap-2 shadow-lg shadow-black/10"
+              className="bg-[url('/button.png')] bg-[length:100%_100%] bg-no-repeat bg-center bg-transparent text-white px-10 py-4 text-sm font-bold lift hover:opacity-90 transition-opacity drop-shadow-lg flex items-center gap-2"
             >
               {t('ctaBtn')} <ArrowRight className="w-4 h-4" />
             </button>

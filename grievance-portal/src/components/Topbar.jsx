@@ -77,31 +77,31 @@ export default function Topbar() {
     navigate('/')
   }
 
-  // Outer header positioning + chrome. Landing uses `fixed` so it floats
-  // above the hero (which now starts at y=0). Inner pages keep `sticky`.
+  // Outer header positioning + chrome. Landing uses `absolute` so it floats
+  // above the hero (which now starts at y=0) but scrolls away. Inner pages keep `relative`.
   const headerCls = isLanding
-    ? `fixed top-0 inset-x-0 z-40 transition-colors duration-300 ${
+    ? `absolute top-0 inset-x-0 z-40 transition-colors duration-300 ${
         overlay
           ? 'bg-transparent'
-          : 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm'
+          : 'bg-[#990000]/95 backdrop-blur-md shadow-md border-b border-[#FFD700]/20'
       }`
-    : 'sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200'
+    : 'relative z-40 bg-[#990000]/95 backdrop-blur-md shadow-md border-b border-[#FFD700]/20'
 
   // Brand square + text. In overlay mode we lean on the yellow accent so
-  // the badge reads against the dark hero; in solid mode it stays navy.
+  // the badge reads against the dark hero; in solid mode it stays yellow as well.
   const brandSquareCls = overlay
-    ? 'w-9 h-9 rounded-lg bg-[#FFD700] text-black grid place-items-center font-extrabold text-sm tracking-tighter group-hover:scale-105 transition-transform shadow-md shadow-black/20'
-    : 'w-9 h-9 rounded-lg bg-navy text-white grid place-items-center font-extrabold text-sm tracking-tighter group-hover:scale-105 transition-transform'
+    ? 'w-9 h-9 rounded-lg bg-[#FFD700] text-[#990000] grid place-items-center font-extrabold text-sm tracking-tighter group-hover:scale-105 transition-transform shadow-md shadow-black/20'
+    : 'w-9 h-9 rounded-lg bg-[#FFD700] text-[#990000] grid place-items-center font-extrabold text-sm tracking-tighter group-hover:scale-105 transition-transform shadow-md'
 
   const brandPrimaryCls = overlay
     ? 'font-bold text-white text-[15px] group-hover:text-[#FFD700] transition-colors'
-    : 'font-bold text-navy text-[15px]'
+    : 'font-bold text-white text-[15px] group-hover:text-[#FFD700] transition-colors'
 
   const brandSecondaryCls = overlay
     ? 'text-[10px] text-white/70 uppercase tracking-widest'
-    : 'text-[10px] text-gray-500 uppercase tracking-widest'
+    : 'text-[10px] text-white/70 uppercase tracking-widest'
 
-  // Desktop link colours. Yellow hover everywhere when overlaid; navy when solid.
+  // Desktop link colours. Yellow hover everywhere.
   const navLinkCls = ({ isActive }) =>
     overlay
       ? `flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
@@ -111,17 +111,17 @@ export default function Topbar() {
         }`
       : `flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
           isActive
-            ? 'bg-navy/5 text-navy'
-            : 'text-gray-600 hover:text-navy hover:bg-gray-50'
+            ? 'bg-[#FFD700]/20 text-[#FFD700]'
+            : 'text-white hover:text-[#FFD700] hover:bg-white/10'
         }`
 
   return (
     <header className={headerCls}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Brand */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className={brandSquareCls}>M</div>
-          <div className="leading-tight">
+        <Link to="/" className="flex items-center gap-3 group">
+          <img src="/logo.png" alt="TVK Logo" className="w-12 h-12 rounded-full object-cover drop-shadow-md" />
+          <div className="leading-tight drop-shadow-sm">
             <div className={brandPrimaryCls}>Mylapore</div>
             <div className={brandSecondaryCls}>Constituency</div>
           </div>
@@ -146,17 +146,25 @@ export default function Topbar() {
                 className={
                   overlay
                     ? 'hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-semibold text-white hover:text-[#FFD700] hover:bg-white/10 transition-colors'
-                    : 'hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-semibold text-navy hover:bg-gray-50 transition-colors'
+                    : 'hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-semibold text-white hover:text-[#FFD700] hover:bg-white/10 transition-colors'
                 }
               >
                 Log In
               </Link>
               <Link
                 to="/register"
+                style={{
+                  WebkitMaskImage: "url('/button.png')",
+                  maskImage: "url('/button.png')",
+                  WebkitMaskSize: "100% 100%",
+                  maskSize: "100% 100%",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskRepeat: "no-repeat"
+                }}
                 className={
                   overlay
-                    ? 'inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-bold bg-[#FFD700] text-black hover:bg-[#FFD700]/90 transition-colors shadow-lg shadow-black/20'
-                    : 'inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-bold bg-navy text-white hover:bg-navy-dark transition-colors shadow-sm'
+                    ? "bg-[#FFD700] text-[#990000] px-6 py-2.5 text-[13px] font-extrabold inline-flex items-center justify-center hover:bg-[#FFD700]/90 transition-colors"
+                    : "bg-[#FFD700] text-[#990000] px-6 py-2.5 text-[13px] font-extrabold inline-flex items-center justify-center hover:bg-[#FFD700]/90 transition-colors"
                 }
               >
                 Register
@@ -170,14 +178,14 @@ export default function Topbar() {
                 className={
                   overlay
                     ? 'flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-white/10 transition-colors'
-                    : 'flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-gray-50 transition-colors'
+                    : 'flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-[#FFD700]/20 transition-colors'
                 }
               >
                 <span
                   className={
                     overlay
-                      ? 'w-8 h-8 rounded-full bg-[#FFD700] text-black grid place-items-center text-sm font-bold'
-                      : 'w-8 h-8 rounded-full bg-navy text-white grid place-items-center text-sm font-bold'
+                      ? 'w-8 h-8 rounded-full bg-[#FFD700] text-[#990000] grid place-items-center text-sm font-bold'
+                      : 'w-8 h-8 rounded-full bg-[#FFD700] text-[#990000] grid place-items-center text-sm font-bold'
                   }
                 >
                   {initial}
@@ -186,7 +194,7 @@ export default function Topbar() {
                   className={
                     overlay
                       ? 'hidden sm:inline text-[13px] font-semibold text-white max-w-[140px] truncate'
-                      : 'hidden sm:inline text-[13px] font-semibold text-navy max-w-[140px] truncate'
+                      : 'hidden sm:inline text-[13px] font-semibold text-white max-w-[140px] truncate'
                   }
                 >
                   {user.name || user.phone}
@@ -227,7 +235,7 @@ export default function Topbar() {
             className={
               overlay
                 ? 'md:hidden p-2 rounded-lg text-white hover:text-[#FFD700] hover:bg-white/10'
-                : 'md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-50'
+                : 'md:hidden p-2 rounded-lg text-white hover:text-[#FFD700] hover:bg-white/10'
             }
             aria-label="Toggle menu"
           >

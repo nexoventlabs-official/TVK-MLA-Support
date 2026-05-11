@@ -67,66 +67,79 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Soft brand glow */}
-      <div className="absolute -top-32 -left-32 w-[40%] h-[40%] bg-navy/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-[40%] h-[40%] bg-saffron/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#fdfdfd] flex flex-col lg:flex-row">
+      
+      {/* ─── LEFT: Image Side ─── */}
+      <div className="hidden lg:flex w-1/2 relative items-center justify-center">
+        <img 
+          src="/vijay.png" 
+          alt="Thalapathy Vijay" 
+          className="w-full h-auto max-h-[90vh] object-contain pointer-events-none"
+        />
+      </div>
 
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl ring-1 ring-black/5 overflow-hidden relative z-10">
-        {/* Brand strip */}
-        <div className="bg-navy p-7 text-center relative">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-saffron via-red-500 to-tvk-green" />
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-white/10 backdrop-blur grid place-items-center border border-white/20 mb-3">
-            <span className="text-xl font-black text-white tracking-tighter">M</span>
+      {/* ─── RIGHT: Form Side ─── */}
+      <div className="w-full lg:w-1/2 min-h-screen flex flex-col bg-[#fdfdfd]">
+        
+        {/* Main Content Centered */}
+        <div className="flex-1 flex flex-col justify-center px-8 sm:px-16 lg:px-24 max-w-2xl mx-auto w-full relative pt-24 pb-12">
+          
+          {/* Back Button */}
+          <button 
+            onClick={() => navigate('/')} 
+            className="absolute top-8 left-8 sm:left-16 lg:left-24 text-gray-400 hover:text-gray-600 flex items-center gap-2 text-sm font-medium transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+
+          {/* Header Brand */}
+          <div className="flex items-center gap-3 mb-10">
+            <img src="/logo.png" alt="TVK Logo" className="w-10 h-10 rounded-full object-cover shadow-sm border border-black/5" />
+            <div className="flex flex-col">
+              <span className="text-[#990000] font-bold text-lg tracking-tight leading-tight">தமிழக வெற்றிக் கழகம்</span>
+              <span className="text-gray-400 text-[10px] uppercase font-semibold tracking-wider">பிறப்பொக்கும் எல்லா உயிர்க்கும்</span>
+            </div>
           </div>
-          <h2 className="text-xl font-bold text-white">Welcome Back</h2>
-          <p className="text-white/70 text-xs mt-1">Sign in to the Mylapore Citizen Portal</p>
-        </div>
 
-        <div className="p-7">
-          {/* Step indicator */}
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <span className={`h-1.5 w-8 rounded-full ${step >= 1 ? 'bg-navy' : 'bg-gray-200'}`} />
-            <span className={`h-1.5 w-8 rounded-full ${step >= 2 ? 'bg-navy' : 'bg-gray-200'}`} />
+          <div className="mb-10">
+            <h1 className="text-3xl font-black text-gray-800 tracking-tight mb-2">Welcome Back!</h1>
+            <p className="text-gray-500 text-sm font-medium">Login to the Mylapore Citizen Portal</p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-100 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 shrink-0" /> {error}
+            <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100 flex items-start gap-2 shadow-sm">
+              <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" /> {error}
             </div>
           )}
           {info && step === 2 && !error && (
-            <div className="mb-4 p-3 bg-tvk-green/5 text-tvk-green text-xs rounded-xl border border-tvk-green/20 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 shrink-0" /> {info}
+            <div className="mb-6 p-4 bg-green-50 text-green-700 text-sm rounded-lg border border-green-200 flex items-center gap-2 shadow-sm">
+              <ShieldCheck className="w-5 h-5 shrink-0" /> {info}
             </div>
           )}
 
           {step === 1 ? (
-            <form onSubmit={requestOtp} className="space-y-5">
+            <form onSubmit={requestOtp} className="space-y-6">
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-gray-600 mb-2">
                   Mobile Number
                 </label>
-                <div className="flex rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-navy focus-within:border-navy bg-gray-50">
-                  <span className="pl-4 pr-2 flex items-center text-gray-400 text-sm font-semibold border-r border-gray-200">+91</span>
-                  <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Phone className="w-4 h-4 text-gray-400" />
-                    </div>
-                    <input
-                      type="tel"
-                      autoComplete="tel-national"
-                      inputMode="numeric"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      className="block w-full pl-9 pr-4 py-3.5 bg-transparent rounded-r-xl text-navy font-semibold focus:outline-none"
-                      placeholder="98xxxxxxxx"
-                      required
-                      autoFocus
-                    />
-                  </div>
+                <div className="flex rounded-md border-2 border-gray-200 focus-within:border-[#E5C77A] bg-gray-100/50 transition-colors overflow-hidden">
+                  <span className="px-4 flex items-center text-gray-500 font-semibold border-r border-gray-200 bg-gray-100">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    autoComplete="tel-national"
+                    inputMode="numeric"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    className="block w-full px-4 py-3.5 bg-transparent text-gray-800 font-bold focus:outline-none"
+                    placeholder="810"
+                    required
+                    autoFocus
+                  />
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1.5">
+                <p className="text-[11px] text-gray-400 mt-2 font-medium">
                   We'll send a 6-digit code via WhatsApp.
                 </p>
               </div>
@@ -134,29 +147,26 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy || phone.length !== 10}
-                className="w-full flex items-center justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-navy hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:bg-[#E5C77A] disabled:text-[#806B3E] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
               >
-                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : (<>Send OTP <ArrowRight className="ml-2 w-4 h-4" /></>)}
+                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send OTP'}
               </button>
             </form>
           ) : (
-            <form onSubmit={verifyOtp} className="space-y-5">
+            <form onSubmit={verifyOtp} className="space-y-6">
               <button
                 type="button"
                 onClick={() => { setStep(1); setOtp(''); setError(''); setInfo('') }}
-                className="text-xs font-semibold text-gray-500 hover:text-navy flex items-center gap-1"
+                className="text-xs font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-1 transition-colors"
               >
                 <ArrowLeft className="w-3 h-3" /> Edit number
               </button>
 
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-gray-600 mb-2">
                   6-Digit Code
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="w-4 h-4 text-gray-400" />
-                  </div>
                   <input
                     ref={otpRef}
                     type="text"
@@ -165,18 +175,18 @@ export default function LoginPage() {
                     maxLength={6}
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-navy font-bold tracking-[0.4em] text-center text-lg focus:ring-2 focus:ring-navy focus:border-navy"
+                    className="block w-full px-4 py-3.5 bg-gray-100/50 border-2 border-gray-200 rounded-md text-gray-800 font-bold tracking-[0.5em] text-center text-lg focus:outline-none focus:border-[#E5C77A] transition-colors"
                     placeholder="••••••"
                     required
                   />
                 </div>
-                <div className="flex items-center justify-between mt-2 text-[11px]">
+                <div className="flex items-center justify-between mt-2 text-[11px] font-medium">
                   <span className="text-gray-400">Code expires in 5 minutes</span>
                   <button
                     type="button"
                     onClick={requestOtp}
                     disabled={secondsLeft > 0 || busy}
-                    className="font-semibold text-navy hover:text-navy-dark disabled:text-gray-300 disabled:cursor-not-allowed"
+                    className="text-[#990000] hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
                     {secondsLeft > 0 ? `Resend in ${secondsLeft}s` : 'Resend OTP'}
                   </button>
@@ -186,22 +196,34 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy || otp.length !== 6}
-                className="w-full flex items-center justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-saffron hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:bg-[#E5C77A] disabled:text-[#806B3E] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Sign In'}
               </button>
             </form>
           )}
 
-          <div className="mt-7 pt-5 border-t border-gray-100 text-center">
-            <p className="text-xs text-gray-500">
-              New here?{' '}
-              <Link to="/register" className="font-bold text-saffron hover:text-orange-600 inline-flex items-center gap-1">
-                <UserPlus className="w-3.5 h-3.5" /> Create an account
+          <div className="mt-12 text-center">
+            <p className="text-sm font-medium text-gray-500">
+              Don't have an account?{' '}
+              <Link to="/register" className="font-bold text-[#990000] hover:text-red-700 transition-colors">
+                Register now
               </Link>
             </p>
           </div>
+
         </div>
+
+        {/* Footer Area */}
+        <div className="py-6 text-center text-[10px] text-gray-400 font-medium">
+          <p>© 2024 Tamilaga Vettri Kazhagam. All Rights Reserved.</p>
+          <div className="flex items-center justify-center gap-3 mt-1">
+            <Link to="#" className="hover:text-gray-600 transition-colors">Privacy Policy</Link>
+            <span className="text-gray-300">|</span>
+            <Link to="#" className="hover:text-gray-600 transition-colors">Terms of Service</Link>
+          </div>
+        </div>
+
       </div>
     </div>
   )

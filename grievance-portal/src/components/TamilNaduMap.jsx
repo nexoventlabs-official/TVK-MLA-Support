@@ -43,19 +43,31 @@ const normalize = (s) => (s || '').trim().toUpperCase().replace(/[^A-Z]/g, '')
  * container resize — without this the map stays blank on first paint
  * because Leaflet measures the container before CSS has settled.
  */
-function FitBounds() {
+function FitBounds({ center, zoom }) {
   const map = useMap()
   useEffect(() => {
     const t = setTimeout(() => {
       map.invalidateSize()
-      map.setView([10.9, 78.4], 6, { animate: false })
+      map.setView(center, zoom, { animate: false })
     }, 150)
     return () => clearTimeout(t)
-  }, [map])
+  }, [map, center, zoom])
   return null
 }
 
-export default function TamilNaduMap({ highlightedDistrict = 'CHENNAI' }) {
+export default function TamilNaduMap({ 
+  highlightedDistrict = 'CHENNAI',
+  singleDistrictMode = false,
+  baseFill = '#e5e7eb',
+  hoverFill = '#fef08a',
+  highlightFill = '#990000',
+  baseColor = '#cbd5e1',
+  highlightColor = '#FFD700',
+  baseOpacity = 0.55,
+  highlightOpacity = 0.92,
+  zoom = 6,
+  center = [10.9, 78.4]
+}) {
   const [geo, setGeo] = useState(null)
   const [error, setError] = useState(null)
 
@@ -87,12 +99,17 @@ export default function TamilNaduMap({ highlightedDistrict = 'CHENNAI' }) {
     const featureName = normalize(feature?.properties?.NAME_2)
     const isMatched =
       target && (featureName.includes(target) || target.includes(featureName))
+    
+    if (singleDistrictMode && !isMatched) {
+      return { opacity: 0, fillOpacity: 0, weight: 0 }
+    }
+
     return {
-      fillColor: isMatched ? '#990000' : '#e5e7eb',
-      weight: isMatched ? 1.6 : 0.8,
+      fillColor: isMatched ? highlightFill : baseFill,
+      weight: isMatched ? (singleDistrictMode ? 2 : 1.6) : 0.8,
       opacity: 1,
-      color: isMatched ? '#FFD700' : '#cbd5e1',
-      fillOpacity: isMatched ? 0.92 : 0.55,
+      color: isMatched ? highlightColor : baseColor,
+      fillOpacity: isMatched ? highlightOpacity : baseOpacity,
     }
   }
 
@@ -104,6 +121,26 @@ export default function TamilNaduMap({ highlightedDistrict = 'CHENNAI' }) {
         '!bg-white !text-navy !border-gray-200 !text-[11px] !shadow-lg !rounded-lg !px-2 !py-1 !font-semibold',
       sticky: true,
     })
+
+    if (!singleDistrictMode) {
+      layer.on({
+        mouseover: (e) => {
+          const featureName = normalize(feature?.properties?.NAME_2)
+          const isMatched = target && (featureName.includes(target) || target.includes(featureName))
+          
+          if (!isMatched) {
+            e.target.setStyle({
+              fillColor: hoverFill,
+              fillOpacity: 0.9,
+            });
+            e.target.bringToFront();
+          }
+        },
+        mouseout: (e) => {
+          e.target.setStyle(styleFeature(feature));
+        }
+      });
+    }
   }
 
   if (error) {
@@ -123,21 +160,29 @@ export default function TamilNaduMap({ highlightedDistrict = 'CHENNAI' }) {
   }
 
   return (
-    <MapContainer
-      center={[10.9, 78.4]}
-      zoom={6}
-      minZoom={6}
-      maxZoom={6}
-      className="w-full h-full bg-transparent z-0"
-      zoomControl={false}
-      dragging={false}
-      scrollWheelZoom={false}
-      doubleClickZoom={false}
-      touchZoom={false}
-      attributionControl={false}
-    >
-      <GeoJSON data={geo} style={styleFeature} onEachFeature={onEachFeature} />
-      <FitBounds />
-    </MapContainer>
+    <>
+      <style>{`
+        .leaflet-interactive:focus {
+          outline: none;
+        }
+      `}</style>
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        minZoom={Math.floor(zoom)}
+        maxZoom={Math.ceil(zoom)}
+        zoomSnap={0.1}
+        className="w-full h-full bg-transparent z-0"
+        zoomControl={false}
+        dragging={false}
+        scrollWheelZoom={false}
+        doubleClickZoom={false}
+        touchZoom={false}
+        attributionControl={false}
+      >
+        <GeoJSON data={geo} style={styleFeature} onEachFeature={onEachFeature} />
+        <FitBounds center={center} zoom={zoom} />
+      </MapContainer>
+    </>
   )
 }
