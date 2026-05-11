@@ -37,18 +37,28 @@ export default function Events() {
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
 
-  const load = async () => {
-    setLoading(true);
+  /**
+   * Fetch events. `silent: true` skips the loading skeleton so the 20 s
+   * background poller can refresh the cards in-place without flashing the
+   * "Loading…" placeholder every tick.
+   */
+  const load = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const { data } = await api.get('/events');
       setItems(data.events || []);
+    } catch (_err) {
+      // ignore polling errors — UI keeps showing the last good snapshot
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     load();
+    // Live refresh every 20 s. Silent — never disturbs the operator.
+    const t = setInterval(() => load({ silent: true }), 20_000);
+    return () => clearInterval(t);
   }, []);
 
   const openCreate = () => {

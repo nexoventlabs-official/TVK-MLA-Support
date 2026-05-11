@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -30,30 +30,48 @@ export default function Members() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('registered');
 
-  const load = async (overrides = {}) => {
-    setLoading(true);
+  // Keep the current search / filter in a ref so the setInterval closure
+  // always reads the freshest values without us having to tear down and
+  // recreate the timer every time the user types or toggles a chip.
+  const queryRef = useRef({ q: '', filter: 'registered' });
+  useEffect(() => { queryRef.current = { q, filter }; }, [q, filter]);
+
+  /**
+   * Fetch members. `silent: true` skips the loading skeleton — used by the
+   * background poller so the table doesn't flash to "Loading…" every 20 s.
+   * `overrides` lets the search form / chip switcher request a one-off
+   * fetch with values that haven't yet committed to state.
+   */
+  const load = async ({ silent = false, overrides = {} } = {}) => {
+    if (!silent) setLoading(true);
     try {
+      const cur = queryRef.current;
       const params = {};
-      const search = overrides.q ?? q;
+      const search = overrides.q ?? cur.q;
       if (search) params.q = search;
-      const f = overrides.filter ?? filter;
+      const f = overrides.filter ?? cur.filter;
       if (f === 'registered') params.registered = '1';
       const { data } = await api.get('/members', { params });
       setMembers(data.members || []);
+    } catch (_err) {
+      // ignore polling errors — UI keeps showing the last good snapshot
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     load();
+    // Live refresh every 20 s. Silent, no skeleton flash, no scroll jump.
+    const t = setInterval(() => load({ silent: true }), 20_000);
+    return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const switchFilter = (f) => {
     if (f === filter) return;
     setFilter(f);
-    load({ filter: f });
+    load({ overrides: { filter: f } });
   };
 
   const totalIssues = members.reduce((sum, m) => sum + (m.requestCount || 0), 0);

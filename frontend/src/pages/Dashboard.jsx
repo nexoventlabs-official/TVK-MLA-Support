@@ -6,7 +6,6 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowUpRight,
-  RefreshCw,
   Activity,
   Calendar as CalendarIcon,
   PieChart as PieIcon,
@@ -55,31 +54,27 @@ export default function Dashboard() {
     meta: { timelineDays: 30, heatmapDays: 60 },
   });
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
 
+  // Single fetcher used both for the initial paint and every silent poll.
+  // We swallow polling errors here so a transient 5xx doesn't kill the
+  // setInterval loop — the next tick will recover automatically.
   const load = async () => {
     try {
       const r = await api.get('/dashboard/stats');
       setData(r.data);
+    } catch (_err) {
+      // ignore — keeps the UI on the last good snapshot
     } finally {
       setLoading(false);
     }
   };
 
-  const sync = async () => {
-    setSyncing(true);
-    try {
-      await api.post('/campaigns/sync');
-      await load();
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   useEffect(() => {
     load();
-    // Auto-refresh every 30s so template statuses stay live
-    const t = setInterval(load, 30_000);
+    // Live refresh every 15s. `loading` stays false after the first paint,
+    // so subsequent polls just slide new numbers / charts in without any
+    // skeleton flicker or scroll jump.
+    const t = setInterval(load, 15_000);
     return () => clearInterval(t);
   }, []);
 
@@ -96,11 +91,15 @@ export default function Dashboard() {
             Snapshot of grievance activity, members and broadcast campaigns.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={sync} disabled={syncing} className="btn-secondary">
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-            <span>{syncing ? 'Syncing…' : 'Sync templates'}</span>
-          </button>
+        {/* Live indicator — replaces the old "Sync templates" button. The
+            whole page auto-refreshes every 15 s; this just lets the operator
+            see at a glance that the data is fresh, not frozen. */}
+        <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-brand-500">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          Live
         </div>
       </div>
 

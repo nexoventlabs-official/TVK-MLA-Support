@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Plus, Trash2, X, Send, RefreshCw, Image as ImageIcon, Video, FileText,
+  Plus, Trash2, X, Send, Image as ImageIcon, Video, FileText,
   Type as TypeIcon, MessageSquare, Phone, Link as LinkIcon, Reply,
 } from 'lucide-react';
 import api from '../api';
@@ -33,34 +33,44 @@ export default function Campaigns() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [sending, setSending] = useState(null);
 
-  const load = async () => {
-    setLoading(true);
+  /**
+   * Fetch the campaign list. `silent: true` skips the loading skeleton so
+   * the background poller (every 20 s) and the periodic Meta-sync (every
+   * 60 s) refresh the cards in-place without any visible flicker.
+   */
+  const load = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const { data } = await api.get('/campaigns');
       setItems(data.campaigns);
+    } catch (_err) {
+      // ignore polling errors — UI keeps showing the last good snapshot
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 20_000); // auto-refresh template status
+    // Two-tier live loop:
+    //   1. Every 20 s pull the latest list so newly-created or just-sent
+    //      campaigns surface without the admin pressing refresh.
+    //   2. Every 3rd tick (≈60 s) silently ask the backend to reconcile
+    //      template statuses with Meta — replaces the old "Sync status"
+    //      button while keeping the Meta API call rate civilised.
+    let syncTick = 0;
+    const t = setInterval(async () => {
+      syncTick += 1;
+      if (syncTick >= 3) {
+        syncTick = 0;
+        try { await api.post('/campaigns/sync'); } catch (_err) { /* swallow */ }
+      }
+      await load({ silent: true });
+    }, 20_000);
     return () => clearInterval(t);
   }, []);
-
-  const sync = async () => {
-    setSyncing(true);
-    try {
-      await api.post('/campaigns/sync');
-      await load();
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -150,10 +160,17 @@ export default function Campaigns() {
           <h1 className="page-title">Campaigns</h1>
           <p className="page-subtitle">Build WhatsApp templates, submit to Meta, and broadcast to all members.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={sync} disabled={syncing} className="btn-secondary">
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Sync status
-          </button>
+        <div className="flex items-center gap-3">
+          {/* Live indicator — template statuses sync with Meta in the
+              background every minute, so there's no need for an explicit
+              "Sync" button anymore. */}
+          <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-brand-500">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            Live
+          </div>
           <button onClick={() => { setForm(blank); setShowForm(true); }} className="btn-primary">
             <Plus size={15} /> New Template
           </button>
