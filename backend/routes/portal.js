@@ -41,6 +41,8 @@ const upload = require('../middleware/upload');
 const { uploadBuffer } = require('../services/cloudinary');
 const { generateTicketId } = require('../services/ticketing');
 const { sendOtpText, sendOtpTemplate, ensureOtpTemplate } = require('../services/metaCloud');
+const { SERVICES } = require('../services/serviceCatalog');
+const { getMap: getFlowImageMap } = require('../services/flowImages');
 
 const router = express.Router();
 
@@ -551,6 +553,53 @@ router.get('/auth/diag', async (req, res) => {
 });
 
 /* ─── public catalog endpoints ────────────────────────────────────── */
+
+/**
+ * GET /services — service catalog with admin-uploaded icons & banners.
+ *
+ * Returns the same SERVICES list the WhatsApp flow renders, with each iconKey
+ * / bannerKey resolved to a Cloudinary URL via the FlowImage collection. The
+ * portal therefore stays in sync with the bot: whatever the admin uploads in
+ * the "Flow Images" page shows up on both surfaces automatically.
+ *
+ * Public — no auth needed (citizen sees this before login).
+ */
+router.get('/services', async (_req, res) => {
+  try {
+    const keys = [];
+    for (const s of SERVICES) {
+      if (s.iconKey) keys.push(s.iconKey);
+      if (s.bannerKey) keys.push(s.bannerKey);
+      for (const o of s.options) {
+        if (o.iconKey) keys.push(o.iconKey);
+      }
+    }
+    const urlMap = await getFlowImageMap(keys);
+
+    const services = SERVICES.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      iconUrl: urlMap[s.iconKey] || '',
+      bannerUrl: urlMap[s.bannerKey] || '',
+      options: s.options.map((o) => ({
+        id: o.id,
+        title: o.title,
+        description: o.description,
+        iconUrl: urlMap[o.iconKey] || '',
+      })),
+    }));
+
+    // Cheap to recompute but icons change rarely — let the browser hold the
+    // payload for a minute. The admin's upload flow already busts the
+    // in-memory FlowImage cache, so the worst-case staleness is 60 s.
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({ services });
+  } catch (err) {
+    console.error('[portal] services error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /** GET /events — same shape as the WhatsApp flow's upcoming-events feed. */
 router.get('/events', async (_req, res) => {

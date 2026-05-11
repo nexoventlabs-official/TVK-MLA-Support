@@ -1,11 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Send, ChevronRight, AlertCircle, Camera, X } from 'lucide-react'
+import { MapPin, Send, ChevronRight, AlertCircle, Camera, X, Loader2 } from 'lucide-react'
 import api from '../lib/api'
 import { useAuth } from '../lib/auth'
 import LocationPicker from '../components/LocationPicker'
-
-import { SERVICES } from '../utils/servicesData'
 
 export default function GrievanceHome() {
   const { user } = useAuth()
@@ -23,6 +21,31 @@ export default function GrievanceHome() {
   const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [grievanceId, setGrievanceId] = useState(null)
+
+  // Catalog is fetched from /portal/services so the same admin-uploaded
+  // icons that drive the WhatsApp flow show up here, with zero duplication.
+  const [services, setServices] = useState([])
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    setCatalogLoading(true)
+    setCatalogError('')
+    api.get('/portal/services')
+      .then((res) => {
+        if (!alive) return
+        setServices(Array.isArray(res.data?.services) ? res.data.services : [])
+      })
+      .catch((err) => {
+        if (!alive) return
+        setCatalogError(err.response?.data?.error || 'Could not load services. Please retry in a moment.')
+      })
+      .finally(() => {
+        if (alive) setCatalogLoading(false)
+      })
+    return () => { alive = false }
+  }, [])
 
   const handleImageChange = (e) => {
     const file = e.target.files[0]
@@ -110,30 +133,48 @@ export default function GrievanceHome() {
           <h2 className="text-lg font-bold text-navy font-serif mb-2">📋 Step 1: Select Category</h2>
           <p className="text-sm text-gray-500 mb-6">Choose the department / type of issue you want to report</p>
 
-          <div className="grid sm:grid-cols-2 gap-3">
-            {SERVICES.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => { setServiceObj(s); setOptionObj(null); setStep(2) }}
-                className="w-full text-left p-4 border border-gray-200 rounded-xl hover:border-navy hover:bg-navy/5 transition-all flex items-start gap-3 group bg-white shadow-sm hover:shadow-md"
-              >
-                <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform flex-shrink-0 p-1 border border-gray-100">
-                  {s.img ? (
-                    <img src={s.img} alt={s.title} className="w-full h-full object-contain" />
-                  ) : (
-                    <span className="text-2xl">{s.icon}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-navy text-sm mb-0.5 flex items-center justify-between">
-                    <span className="truncate">{s.title}</span>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-navy group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </h3>
-                  <p className="text-[11px] text-gray-500 leading-tight">{s.description}</p>
-                </div>
-              </button>
-            ))}
-          </div>
+          {catalogLoading && (
+            <div className="flex items-center justify-center py-12 text-gray-400">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <span className="text-sm">Loading services…</span>
+            </div>
+          )}
+
+          {!catalogLoading && catalogError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div className="text-sm">{catalogError}</div>
+            </div>
+          )}
+
+          {!catalogLoading && !catalogError && (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {services.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => { setServiceObj(s); setOptionObj(null); setStep(2) }}
+                  className="w-full text-left p-4 border border-gray-200 rounded-xl hover:border-navy hover:bg-navy/5 transition-all flex items-start gap-3 group bg-white shadow-sm hover:shadow-md"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform flex-shrink-0 p-1 border border-gray-100">
+                    {s.iconUrl ? (
+                      <img src={s.iconUrl} alt={s.title} className="w-full h-full object-contain" loading="lazy" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-navy/5 text-navy text-sm font-bold">
+                        {s.title?.charAt(0) || '?'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-navy text-sm mb-0.5 flex items-center justify-between">
+                      <span className="truncate">{s.title}</span>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-navy group-hover:translate-x-1 transition-all flex-shrink-0" />
+                    </h3>
+                    <p className="text-[11px] text-gray-500 leading-tight">{s.description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -143,6 +184,12 @@ export default function GrievanceHome() {
           <h2 className="text-lg font-bold text-navy font-serif mb-2">🔍 Step 2: Select Issue Type</h2>
           <p className="text-sm text-gray-500 mb-4">Choose the specific issue under <strong>{category}</strong></p>
 
+          {serviceObj?.bannerUrl && (
+            <div className="mb-4 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
+              <img src={serviceObj.bannerUrl} alt={`${serviceObj.title} banner`} className="w-full h-32 object-cover" loading="lazy" />
+            </div>
+          )}
+
           <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
             {(serviceObj?.options || []).map((opt, i) => (
               <button
@@ -151,8 +198,8 @@ export default function GrievanceHome() {
                 className="w-full text-left p-4 border border-gray-200 rounded-2xl hover:border-navy hover:bg-navy/5 transition-all flex items-center gap-4 group bg-white shadow-sm hover:shadow-md"
               >
                 <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform flex-shrink-0 p-1 border border-gray-100">
-                  {opt.img ? (
-                    <img src={opt.img} alt={opt.title} className="w-full h-full object-contain" />
+                  {opt.iconUrl ? (
+                    <img src={opt.iconUrl} alt={opt.title} className="w-full h-full object-contain" loading="lazy" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-navy/5 text-navy text-xs font-bold">
                       {i + 1}
