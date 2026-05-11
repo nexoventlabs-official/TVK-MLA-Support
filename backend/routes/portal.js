@@ -44,6 +44,7 @@ const { sendOtpText, sendOtpTemplate, ensureOtpTemplate } = require('../services
 const { sendOtpSms: sendOtpSmsTelesign } = require('../services/telesign');
 const { sendOtpSms: sendOtpSmsFast2SMS } = require('../services/fast2sms');
 const { sendOtpSms: sendOtpSmsTwoFactor } = require('../services/twofactor');
+const { findVoterByEpic } = require('../services/voterDb');
 const { SERVICES } = require('../services/serviceCatalog');
 const { getMap: getFlowImageMap } = require('../services/flowImages');
 const { getAction } = require('../services/issueActions');
@@ -218,6 +219,7 @@ function publicMember(m) {
     email: m.email || '',
     dob: m.dob || null,
     age: m.age || null,
+    gender: m.gender || '',
     epic: m.epicNo || '',
     isRegistered: !!m.isRegistered,
     registrationType: m.registrationType || '',
@@ -242,6 +244,82 @@ async function requireAuth(req, res, next) {
 }
 
 /* ─── auth ────────────────────────────────────────────────────────── */
+
+/**
+ * POST /auth/lookup-epic
+ *
+ * Step-1 of the EPIC-based registration flow on the citizen portal.
+ *
+ * Takes `{ epic, phone, dob }` and looks the EPIC number up in the
+ * read-only voter roll DB. The phone + DOB are validated for shape and
+ * carried through to the registration step, but they are NOT cross-checked
+ * against the voter record because the source roll has neither field
+ * populated reliably (mobile column is mostly empty, DOB column doesn't
+ * exist at all). The point of this call is purely "does this EPIC exist
+ * and what name / gender / address sit behind it" so the user can confirm
+ * before we commit them as a registered voter.
+ *
+ * Refuses to look up the EPIC if the phone is already registered, so a
+ * malicious caller can't enumerate voter records by spamming this endpoint
+ * with someone else's already-registered phone.
+ *
+ * Responses:
+ *   200 → { ok: true, voter: {...sanitized voter fields...} }
+ *   404 → { error: 'No voter found with this EPIC number.' }
+ *   400 → invalid input
+ *   409 → phone already registered
+ */
+router.post('/auth/lookup-epic', async (req, res) => {
+  try {
+    const { epic, phone, dob } = req.body || {};
+
+    const e164 = normalisePhone(phone);
+    if (!e164) {
+      return res.status(400).json({ error: 'Enter a valid 10-digit mobile number' });
+    }
+
+    const epicTrim = epic ? String(epic).trim().toUpperCase() : '';
+    if (!epicTrim || !/^[A-Z]{2,3}[0-9]{6,7}$/.test(epicTrim)) {
+      return res.status(400).json({ error: 'EPIC format looks invalid (expected e.g. TNA1234567)' });
+    }
+
+    const dobDate = dob ? new Date(dob) : null;
+    if (!dobDate || Number.isNaN(dobDate.getTime()) || dobDate > new Date()) {
+      return res.status(400).json({ error: 'Enter a valid date of birth' });
+    }
+
+    // Block enumeration: if the phone already belongs to a registered Member
+    // we must not leak voter details under a different EPIC.
+    const existingMember = await Member.findOne({ phone: e164 });
+    if (existingMember && existingMember.isRegistered) {
+      return res.status(409).json({ error: 'This number is already registered. Please log in.' });
+    }
+
+    const voter = await findVoterByEpic(epicTrim);
+    if (!voter) {
+      return res.status(404).json({ error: 'No voter found with this EPIC number.' });
+    }
+
+    // Strip the source-collection name and any other internal-only fields
+    // before returning the record to the public confirmation screen.
+    return res.json({
+      ok: true,
+      voter: {
+        name: voter.name,
+        epicNo: voter.epicNo,
+        gender: voter.gender,
+        relationType: voter.relationType,
+        relationName: voter.relationName,
+        houseNo: voter.houseNo,
+        assemblyNo: voter.assemblyNo,
+        assemblyName: voter.assemblyName,
+      },
+    });
+  } catch (err) {
+    console.error('[portal] lookup-epic error:', err);
+    res.status(500).json({ error: 'Could not look up EPIC right now. Try again in a moment.' });
+  }
+});
 
 /**
  * POST /auth/send-otp
@@ -446,24 +524,46 @@ router.post('/auth/verify-otp', async (req, res) => {
  * profile fields — so the WhatsApp identity and the web identity are the same
  * person.
  *
- * `epic` is optional. When omitted we mark registrationType='manual'.
+ * Two registration paths converge here:
+ *
+ *   1. EPIC path     — caller passes `epic`. We re-fetch the voter record
+ *                      from the read-only roll DB and use ITS name + gender
+ *                      as the source of truth. Whatever the user typed (if
+ *                      anything) is ignored, so the on-roll identity is
+ *                      preserved exactly. We also persist a `voterSnapshot`
+ *                      so admin views stay consistent if the source roll
+ *                      later changes.
+ *   2. Manual path   — caller passes `name` + `gender`. No voter lookup,
+ *                      `registrationType` is recorded as 'manual'.
  */
 router.post('/auth/register', async (req, res) => {
   try {
-    const { phone, otp, name, dob, epic } = req.body || {};
+    const { phone, otp, name, dob, epic, gender } = req.body || {};
     const e164 = normalisePhone(phone);
     if (!e164) return res.status(400).json({ error: 'Enter a valid 10-digit mobile number' });
     if (!otp) return res.status(400).json({ error: 'OTP is required' });
-    if (!name || !String(name).trim()) return res.status(400).json({ error: 'Full name is required' });
 
     const dobDate = dob ? new Date(dob) : null;
-    if (dob && (Number.isNaN(dobDate?.getTime?.()) || dobDate > new Date())) {
+    if (!dobDate || Number.isNaN(dobDate.getTime()) || dobDate > new Date()) {
       return res.status(400).json({ error: 'Enter a valid date of birth' });
     }
 
     const epicTrim = epic ? String(epic).trim().toUpperCase() : '';
     if (epicTrim && !/^[A-Z]{2,3}[0-9]{6,7}$/.test(epicTrim)) {
       return res.status(400).json({ error: 'EPIC number looks invalid (expected e.g. TNA1234567)' });
+    }
+
+    // Manual-path fields. Only required when no EPIC is supplied — the EPIC
+    // path overrides them with values from the voter roll below.
+    const trimmedName = name ? String(name).trim() : '';
+    const trimmedGender = gender ? String(gender).trim() : '';
+    if (!epicTrim) {
+      if (!trimmedName || trimmedName.length < 2) {
+        return res.status(400).json({ error: 'Full name is required' });
+      }
+      if (!['Male', 'Female', 'Other'].includes(trimmedGender)) {
+        return res.status(400).json({ error: 'Please select a gender' });
+      }
     }
 
     const record = await OtpCode.findOne({ phone: e164, purpose: 'register', consumed: false })
@@ -485,14 +585,53 @@ router.post('/auth/register', async (req, res) => {
       return res.status(409).json({ error: 'This number is already registered. Please log in.' });
     }
 
+    // EPIC path: re-validate the voter on the server. We don't trust the
+    // confirmation payload from the browser — a tampered request could swap
+    // the voter's name in. So we always re-query the roll using the EPIC.
+    let voterRecord = null;
+    if (epicTrim) {
+      voterRecord = await findVoterByEpic(epicTrim);
+      if (!voterRecord) {
+        return res.status(404).json({ error: 'No voter found with this EPIC number.' });
+      }
+    }
+
     if (!member) {
       member = new Member({ phone: e164, firstSeenAt: new Date() });
     }
-    member.name = String(name).trim();
-    if (dobDate) member.dob = dobDate;
-    if (epicTrim) member.epicNo = epicTrim;
+    if (voterRecord) {
+      // EPIC path — voter roll wins for identity fields.
+      member.name = voterRecord.name || trimmedName || member.name || '';
+      if (voterRecord.gender) {
+        // Voter DB stores 'M' / 'F' / 'O' or 'Male' / 'Female'. Normalise.
+        const g = String(voterRecord.gender).trim().toUpperCase();
+        if (g.startsWith('M')) member.gender = 'Male';
+        else if (g.startsWith('F')) member.gender = 'Female';
+        else if (g) member.gender = 'Other';
+      }
+      member.epicNo = voterRecord.epicNo || epicTrim;
+      member.voterSnapshot = {
+        voterId: voterRecord.voterId || null,
+        name: voterRecord.name || '',
+        epicNo: voterRecord.epicNo || epicTrim,
+        relationType: voterRecord.relationType || '',
+        relationName: voterRecord.relationName || '',
+        gender: voterRecord.gender || '',
+        houseNo: voterRecord.houseNo || '',
+        mobile: voterRecord.mobile || '',
+        assemblyNo: voterRecord.assemblyNo || '',
+        assemblyName: voterRecord.assemblyName || '',
+        sourceCollection: voterRecord.sourceCollection || '',
+      };
+      member.registrationType = 'epic';
+    } else {
+      // Manual path — trust the form fields exactly.
+      member.name = trimmedName;
+      member.gender = trimmedGender;
+      member.registrationType = 'manual';
+    }
+    member.dob = dobDate;
     member.isRegistered = true;
-    member.registrationType = epicTrim ? 'epic' : 'manual';
     member.registeredAt = new Date();
     member.lastSeenAt = new Date();
     await member.save();
