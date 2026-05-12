@@ -57,6 +57,9 @@ export default function GrievanceHome() {
   const [optionObj,  setOptionObj]  = useState(null)
   const [location,   setLocation]   = useState({ text: '', lat: null, lng: null })
   const [description, setDescription] = useState('')
+  // Issue-specific extra field. Currently only `education.mid_day_meal_issue`
+  // collects this (matches the WhatsApp DETAILS form at flowJson.js).
+  const [schoolName,  setSchoolName]  = useState('')
   const [image,        setImage]        = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [loading,      setLoading]      = useState(false)
@@ -126,6 +129,7 @@ export default function GrievanceHome() {
   const resetDownstream = () => {
     setLocation({ text: '', lat: null, lng: null })
     setDescription('')
+    setSchoolName('')
     setImage(null); setImagePreview(null)
     setSubmitError('')
   }
@@ -170,6 +174,7 @@ export default function GrievanceHome() {
       fd.append('optionId',     optionObj.id)
       fd.append('optionTitle',  optionObj.title)
       fd.append('description',  description.trim())
+      if (schoolName.trim()) fd.append('schoolName', schoolName.trim())
       fd.append('location',     location.text || '')
       if (location.lat != null) fd.append('lat', location.lat)
       if (location.lng != null) fd.append('lng', location.lng)
@@ -223,6 +228,8 @@ export default function GrievanceHome() {
             needs={needs}
             description={description}
             setDescription={setDescription}
+            schoolName={schoolName}
+            setSchoolName={setSchoolName}
             location={location}
             onLocationSelect={handleLocationSelect}
             imagePreview={imagePreview}
@@ -244,6 +251,7 @@ export default function GrievanceHome() {
             option={optionObj}
             location={location}
             description={description}
+            schoolName={schoolName}
             kind={kind}
             action={action}
             onAnother={resetForNewGrievance}
@@ -366,11 +374,16 @@ function SelectionScreen({ services, activeService, loading, error, onPickServic
 function DetailsScreen({
   service, option, action, kind, needs,
   description, setDescription,
+  schoolName, setSchoolName,
   location, onLocationSelect,
   imagePreview, onImageChange, onImageRemove,
   submitError, loading, canSubmit, onSubmit,
   onBack, onChangeCategory,
 }) {
+  // Issue-specific extra fields. Today only the mid-day-meal issue collects
+  // the school name (matches the WhatsApp DETAILS form). If the catalog grows
+  // to need more option-keyed extras, extend this gate here.
+  const showSchoolName = option?.id === 'mid_day_meal_issue'
   // CTA-only flows (url / pdf) — no ticket created.
   if (!needs.ticket) {
     return (
@@ -511,6 +524,23 @@ function DetailsScreen({
             </FieldCard>
           )}
 
+          {/* Mid-day-meal issue specific extra — mirrors the WhatsApp form. */}
+          {showSchoolName && (
+            <FieldCard
+              label="School name"
+              hint="Which school is this about? Helps us route the request to the right Education officer."
+            >
+              <input
+                type="text"
+                className="w-full bg-gray-100/50 border-2 border-gray-200 rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#E5C77A] transition-colors text-gray-800"
+                placeholder="e.g. Govt. Higher Secondary School, Mylapore"
+                value={schoolName}
+                onChange={(e) => e.target.value.length <= 200 && setSchoolName(e.target.value)}
+                maxLength={200}
+              />
+            </FieldCard>
+          )}
+
           {needs.location && (
             <FieldCard label="Location" required hint="Pin the issue on the map or share your live location.">
               <LocationPicker onLocationSelect={onLocationSelect} />
@@ -576,6 +606,13 @@ function DetailsScreen({
                     filled={!!description.trim()}
                   />
                 )}
+                {showSchoolName && (
+                  <SummaryRow
+                    label="School"
+                    value={schoolName.trim() || null}
+                    filled={!!schoolName.trim()}
+                  />
+                )}
                 {needs.location && (
                   <SummaryRow label="Location" value={location.text || null} filled={!!location.text} />
                 )}
@@ -621,7 +658,7 @@ function DetailsScreen({
 /* ════════════════════════════════════════════════════════════════ */
 
 function SuccessScreen({
-  grievanceId, service, option, location, description, kind, action,
+  grievanceId, service, option, location, description, schoolName = '', kind, action,
   onAnother, onMine,
 }) {
   return (
@@ -650,6 +687,12 @@ function SuccessScreen({
               <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Issue</dt>
               <dd className="font-semibold text-gray-800">{option?.title}</dd>
             </div>
+            {schoolName.trim() && (
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">School</dt>
+                <dd className="font-semibold text-gray-800">{schoolName.trim()}</dd>
+              </div>
+            )}
             {location.text && (
               <div className="sm:col-span-2">
                 <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Location</dt>

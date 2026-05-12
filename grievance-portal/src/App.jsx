@@ -8,7 +8,8 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import GrievanceHome from './pages/GrievanceHome'
 import MyGrievances from './pages/MyGrievances'
-import TrackStatus from './pages/TrackStatus'
+import GrievanceDetail from './pages/GrievanceDetail'
+import EventsPage from './pages/EventsPage'
 
 /* ─── route gates ─────────────────────────────────────────────────── */
 
@@ -54,8 +55,9 @@ export default function App() {
           <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
 
           <Route path="/grievance"     element={<Protected><GrievanceHome /></Protected>} />
-          <Route path="/my-grievances" element={<Protected><MyGrievances /></Protected>} />
-          <Route path="/track"         element={<Protected><TrackStatus  /></Protected>} />
+          <Route path="/my-grievances"            element={<Protected><MyGrievances    /></Protected>} />
+          <Route path="/my-grievances/:ticketId" element={<Protected><GrievanceDetail /></Protected>} />
+          <Route path="/events"                  element={<EventsPage />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

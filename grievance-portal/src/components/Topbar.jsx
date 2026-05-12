@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, LogOut, User as UserIcon, FileText, Eye, Search, Home } from 'lucide-react'
+import { Menu, X, LogOut, User as UserIcon, FileText, Eye, Calendar, Home } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
 /**
@@ -65,7 +65,7 @@ export default function Topbar() {
         { to: '/',              label: 'Home',         Icon: Home },
         { to: '/grievance',     label: 'File',         Icon: FileText },
         { to: '/my-grievances', label: 'My Requests',  Icon: Eye },
-        { to: '/track',         label: 'Track',        Icon: Search },
+        { to: '/events',        label: 'Events',       Icon: Calendar },
       ]
     : []
 

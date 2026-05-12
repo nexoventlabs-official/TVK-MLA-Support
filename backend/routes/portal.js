@@ -901,6 +901,7 @@ router.post('/grievances', requireAuth, upload.single('image'), async (req, res)
       description = '',
       location = '',
       lat, lng,
+      schoolName = '',
     } = req.body || {};
 
     if (!serviceId || !optionId) {
@@ -955,6 +956,7 @@ router.post('/grievances', requireAuth, upload.single('image'), async (req, res)
       optionTitle: String(optionTitle),
       description: body.slice(0, 2000),
       location: String(location || ''),
+      schoolName: String(schoolName || '').trim().slice(0, 200),
       geo,
       mediaUrls,
       status: 'pending',
