@@ -353,11 +353,30 @@ async function buildEventsList() {
     .sort({ fromDate: 1 })
     .limit(20)
     .lean();
-  return events.map((ev) => ({
-    id: String(ev._id),
-    title: (ev.title || '').slice(0, 30),
-    description: `${formatEventDate(ev.fromDate)}${ev.location ? ' · ' + ev.location.slice(0, 24) : ''}`,
-  }));
+
+  // Fetch a square thumbnail for each event image in parallel. The Flow
+  // payload has a ~250 KB base64 budget per response, so we keep icons at
+  // 200×200 JPG q75 (~5 KB each — matches the main-menu icon sizing on
+  // line 126). Any fetch failure just drops the icon for that row so one
+  // bad Cloudinary URL can't break the whole list.
+  const thumbs = await Promise.all(
+    events.map((ev) =>
+      ev.image
+        ? urlToBase64(ev.image, { width: 200, height: 200, crop: 'fill', quality: 75, format: 'jpg' }).catch(() => '')
+        : Promise.resolve('')
+    )
+  );
+
+  return events.map((ev, i) =>
+    withImage(
+      {
+        id: String(ev._id),
+        title: (ev.title || '').slice(0, 30),
+        description: `${formatEventDate(ev.fromDate)}${ev.location ? ' · ' + ev.location.slice(0, 24) : ''}`,
+      },
+      thumbs[i]
+    )
+  );
 }
 
 /** Status pill text shown to the user. */
