@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { MapPin, Navigation, Pencil } from 'lucide-react'
+import { MapPin, Navigation, Pencil, Map } from 'lucide-react'
 
 export default function LocationPicker({ onLocationSelect }) {
   const [mode, setMode] = useState(null) // null, 'gps', 'manual'
@@ -52,30 +52,38 @@ export default function LocationPicker({ onLocationSelect }) {
     <div className="space-y-4">
       {/* Primary Actions */}
       {!mode && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             onClick={handleGPS}
-            className="flex items-center gap-3 p-4 border-2 border-navy/20 rounded-lg hover:border-navy hover:bg-navy/5 transition-all text-left"
+            className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border border-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.04)] rounded-2xl hover:border-[#990000]/30 hover:shadow-md transition-all duration-300 text-center relative overflow-hidden"
           >
-            <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center flex-shrink-0">
-              <Navigation className="w-5 h-5 text-navy" />
+            <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:bg-[#990000]/5 transition-all duration-300">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg" 
+                alt="Google Maps" 
+                className="w-8 h-8 object-contain"
+              />
             </div>
             <div>
-              <div className="font-semibold text-sm text-navy">📍 Use My Current Location</div>
-              <div className="text-xs text-gray-500">Auto-detect via GPS</div>
+              <div className="font-bold text-[15px] text-gray-800 group-hover:text-[#990000] transition-colors duration-300">Use My Current Location</div>
+              <div className="text-xs text-gray-500 mt-1">Auto-detect via GPS</div>
             </div>
           </button>
 
           <button
             onClick={() => setMode('manual')}
-            className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-saffron hover:bg-saffron/5 transition-all text-left"
+            className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border border-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.04)] rounded-2xl hover:border-[#990000]/30 hover:shadow-md transition-all duration-300 text-center relative overflow-hidden"
           >
-            <div className="w-10 h-10 rounded-full bg-saffron/10 flex items-center justify-center flex-shrink-0">
-              <Pencil className="w-5 h-5 text-saffron" />
+            <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:bg-[#990000]/5 transition-all duration-300">
+              <img 
+                src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f4dd.svg" 
+                alt="Manual Entry" 
+                className="w-8 h-8 object-contain"
+              />
             </div>
             <div>
-              <div className="font-semibold text-sm text-gray-700">✏️ Type Landmark / Area</div>
-              <div className="text-xs text-gray-500">Enter manually</div>
+              <div className="font-bold text-[15px] text-gray-800 group-hover:text-[#990000] transition-colors duration-300">Manually Enter Address</div>
+              <div className="text-xs text-gray-500 mt-1">Type address details</div>
             </div>
           </button>
         </div>

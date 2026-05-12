@@ -42,7 +42,6 @@ const KIND_NEEDS = {
 
 const SCREEN = {
   CATEGORY: 'category',
-  ISSUE:    'issue',
   DETAILS:  'details',
   SUCCESS:  'success',
 }
@@ -72,11 +71,20 @@ export default function GrievanceHome() {
     let alive = true
     setCatalogLoading(true); setCatalogError('')
     api.get('/portal/services')
-      .then((res) => { if (alive) setServices(Array.isArray(res.data?.services) ? res.data.services : []) })
+      .then((res) => { 
+        if (alive) {
+          const loadedServices = Array.isArray(res.data?.services) ? res.data.services : []
+          setServices(loadedServices)
+          // Automatically select the first category if none is selected
+          if (loadedServices.length > 0 && !serviceObj) {
+            setServiceObj(loadedServices[0])
+          }
+        }
+      })
       .catch((err) => { if (alive) setCatalogError(err.response?.data?.error || 'Could not load services. Please retry in a moment.') })
       .finally(() => { if (alive) setCatalogLoading(false) })
     return () => { alive = false }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to top on every screen change so the new "page" reads from the top.
   useEffect(() => {
@@ -126,7 +134,6 @@ export default function GrievanceHome() {
     setServiceObj(s)
     setOptionObj(null)
     resetDownstream()
-    setScreen(SCREEN.ISSUE)
   }
 
   const pickOption = (o) => {
@@ -144,7 +151,7 @@ export default function GrievanceHome() {
   const backToIssue = () => {
     setOptionObj(null)
     resetDownstream()
-    setScreen(SCREEN.ISSUE)
+    setScreen(SCREEN.CATEGORY)
   }
 
   const submitTicket = async () => {
@@ -192,72 +199,18 @@ export default function GrievanceHome() {
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#fdfdfd]">
-      {/* Top page chrome — brand strip + breadcrumb pills, edge-to-edge */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="w-full px-4 sm:px-8 lg:px-12 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="TVK"
-              className="w-10 h-10 rounded-full object-cover shadow-sm border border-black/5"
-            />
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[3px] text-[#990000]">
-                Citizen Service
-              </p>
-              <h1 className="text-xl md:text-2xl font-black text-gray-800 tracking-tight">
-                File a Grievance
-              </h1>
-            </div>
-          </div>
 
-          {/* Breadcrumb — replaces the stepper. Pills are clickable on
-              the done steps so users can jump back without losing context. */}
-          <nav className="flex items-center gap-1.5 text-[12px] flex-wrap">
-            <Crumb
-              done={screen !== SCREEN.CATEGORY}
-              active={screen === SCREEN.CATEGORY}
-              onClick={screen !== SCREEN.CATEGORY ? backToCategory : null}
-            >
-              1. Category
-            </Crumb>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-            <Crumb
-              done={screen === SCREEN.DETAILS || screen === SCREEN.SUCCESS}
-              active={screen === SCREEN.ISSUE}
-              disabled={!serviceObj}
-              onClick={serviceObj && (screen === SCREEN.DETAILS) ? backToIssue : null}
-            >
-              2. Issue
-            </Crumb>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-            <Crumb
-              done={screen === SCREEN.SUCCESS}
-              active={screen === SCREEN.DETAILS}
-              disabled={!optionObj}
-            >
-              3. Details
-            </Crumb>
-          </nav>
-        </div>
-      </header>
 
       {/* Screen body — edge to edge, internal padding only */}
       <main className="w-full px-4 sm:px-8 lg:px-12 py-8 md:py-10">
         {screen === SCREEN.CATEGORY && (
-          <CategoryScreen
+          <SelectionScreen
             services={services}
+            activeService={serviceObj}
             loading={catalogLoading}
             error={catalogError}
-            onPick={pickService}
-          />
-        )}
-
-        {screen === SCREEN.ISSUE && serviceObj && (
-          <IssueScreen
-            service={serviceObj}
-            onPick={pickOption}
-            onBack={backToCategory}
+            onPickService={pickService}
+            onPickOption={pickOption}
           />
         )}
 
@@ -303,22 +256,12 @@ export default function GrievanceHome() {
 }
 
 /* ════════════════════════════════════════════════════════════════ */
-/*  SCREEN: 1. CATEGORY                                              */
+/*  SCREEN: 1. SELECTION (Categories + Issues)                       */
 /* ════════════════════════════════════════════════════════════════ */
 
-function CategoryScreen({ services, loading, error, onPick }) {
+function SelectionScreen({ services, activeService, loading, error, onPickService, onPickOption }) {
   return (
     <section>
-      <div className="mb-8 max-w-3xl">
-        <h2 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight mb-2">
-          Choose a category
-        </h2>
-        <p className="text-gray-500 text-sm md:text-base">
-          Pick the department or service area that best matches your issue. You'll choose
-          the specific issue on the next page.
-        </p>
-      </div>
-
       {loading && (
         <div className="flex items-center justify-center py-20 text-gray-400">
           <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -333,92 +276,85 @@ function CategoryScreen({ services, loading, error, onPick }) {
         </div>
       )}
 
-      {!loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
-          {services.map((s) => (
-            <GridCard
-              key={s.id}
-              iconUrl={s.iconUrl}
-              fallbackInitial={s.title?.charAt(0) || '?'}
-              title={s.title}
-              subtitle={s.description}
-              onClick={() => onPick(s)}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
+      {!loading && !error && services.length > 0 && (
+        <>
+          <div className="mb-8">
+            <h2 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight mb-6 text-center">
+              Select a Category
+            </h2>
+            {/* Wrapped Categories without boxes */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-6 md:gap-x-8 mb-4">
+              {services.map((s) => {
+                const isActive = activeService?.id === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => onPickService(s)}
+                    className="group shrink-0 flex flex-col items-center justify-start gap-2 w-[72px] sm:w-[80px] md:w-[90px] transition-all bg-transparent"
+                  >
+                    <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center overflow-hidden transition-all duration-300 ${
+                      isActive 
+                        ? 'ring-2 ring-[#990000] ring-offset-2 bg-white shadow-md transform scale-110' 
+                        : 'border border-gray-200 bg-white group-hover:border-[#E5C77A] group-hover:shadow-sm'
+                    }`}>
+                      {s.iconUrl ? (
+                        <img src={s.iconUrl} alt={s.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className={`text-lg font-bold ${isActive ? 'text-[#990000]' : 'text-gray-500'}`}>
+                          {s.title?.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                    <span className={`font-bold text-center text-[11px] md:text-[12px] leading-tight break-words whitespace-normal transition-colors ${
+                      isActive ? 'text-[#990000]' : 'text-gray-600 group-hover:text-gray-900'
+                    }`}>
+                      {s.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-/* ════════════════════════════════════════════════════════════════ */
-/*  SCREEN: 2. ISSUE                                                 */
-/* ════════════════════════════════════════════════════════════════ */
+          {/* Issues Grid for Active Service */}
+          {activeService && (
+            <div className="mt-8 pt-8 border-t border-gray-100">
+              <div className="mb-8 max-w-3xl mx-auto text-center">
+                <h3 className="text-xl md:text-2xl font-black text-gray-800 tracking-tight mb-2">
+                  Choose the specific issue
+                </h3>
+                <p className="text-gray-500 text-sm md:text-base">
+                  What kind of <strong className="text-gray-800">{activeService.title}</strong> issue are you reporting?
+                </p>
+              </div>
 
-function IssueScreen({ service, onPick, onBack }) {
-  return (
-    <section>
-      <button
-        onClick={onBack}
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 font-semibold mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" /> Back to categories
-      </button>
+              {activeService.bannerUrl && (
+                <div className="mb-6 rounded-2xl overflow-hidden border border-gray-200 bg-white max-w-5xl">
+                  <img
+                    src={activeService.bannerUrl}
+                    alt={`${activeService.title} banner`}
+                    className="w-full h-40 md:h-48 object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              )}
 
-      <div className="mb-6 max-w-3xl">
-        <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#990000] mb-1">
-          Step 2 of 3
-        </p>
-        <h2 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight mb-2">
-          Choose the specific issue
-        </h2>
-        <p className="text-gray-500 text-sm md:text-base">
-          What kind of <strong className="text-gray-800">{service.title}</strong> issue are
-          you reporting?
-        </p>
-      </div>
-
-      {/* Active category chip */}
-      <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-full bg-[#E5C77A]/25 border border-[#E5C77A] mb-6">
-        <div className="w-7 h-7 rounded-full bg-white grid place-items-center overflow-hidden p-0.5 border border-black/5">
-          {service.iconUrl ? (
-            <img src={service.iconUrl} alt={service.title} className="w-full h-full object-contain" />
-          ) : (
-            <span className="text-[#806B3E] text-[11px] font-bold">{service.title?.charAt(0)}</span>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+                {(activeService.options || []).map((opt, i) => (
+                  <GridCard
+                    key={opt.id}
+                    iconUrl={opt.iconUrl}
+                    fallbackInitial={String(i + 1)}
+                    title={opt.title}
+                    subtitle={opt.description}
+                    onClick={() => onPickOption(opt)}
+                  />
+                ))}
+              </div>
+            </div>
           )}
-        </div>
-        <span className="text-sm font-bold text-[#806B3E]">{service.title}</span>
-        <button
-          onClick={onBack}
-          className="text-[11px] font-bold text-[#806B3E] hover:text-[#806B3E]/80 inline-flex items-center gap-1"
-        >
-          <Pencil className="w-3 h-3" /> Change
-        </button>
-      </div>
-
-      {service.bannerUrl && (
-        <div className="mb-6 rounded-2xl overflow-hidden border border-gray-200 bg-white max-w-5xl">
-          <img
-            src={service.bannerUrl}
-            alt={`${service.title} banner`}
-            className="w-full h-40 md:h-48 object-cover"
-            loading="lazy"
-          />
-        </div>
+        </>
       )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
-        {(service.options || []).map((opt, i) => (
-          <GridCard
-            key={opt.id}
-            iconUrl={opt.iconUrl}
-            fallbackInitial={String(i + 1)}
-            title={opt.title}
-            subtitle={opt.description}
-            onClick={() => onPick(opt)}
-          />
-        ))}
-      </div>
     </section>
   )
 }
@@ -482,7 +418,7 @@ function DetailsScreen({
               href={kind === 'pdf' ? action?.pdfUrl : action?.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] transition-all shadow-sm ${
+              className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] transition-all shadow-sm ${
                 (kind === 'pdf' && !action?.pdfUrl) || (kind === 'url' && !action?.url)
                   ? 'opacity-50 pointer-events-none' : ''
               }`}
@@ -610,13 +546,27 @@ function DetailsScreen({
 
         {/* Sticky summary + submit */}
         <aside className="lg:col-span-1">
-          <div className="lg:sticky lg:top-20 space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-200">
-                <p className="text-[10px] font-bold uppercase tracking-[3px] text-[#990000]">Summary</p>
-                <h3 className="text-base font-bold text-gray-800 mt-0.5">Your grievance</h3>
+          <div className="lg:sticky lg:top-24 space-y-5">
+            <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 overflow-hidden relative">
+              {/* Ticket Top accent line */}
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#990000] via-[#FFD700] to-[#990000]"></div>
+              
+              <div className="px-6 pt-7 pb-4 bg-gray-50/50">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-[18px] font-black text-gray-800 tracking-tight">Ticket Summary</h3>
+                  <span className="text-[10px] font-bold uppercase bg-white border border-gray-200 text-gray-500 px-2 py-1 rounded-md tracking-widest shadow-sm">Draft</span>
+                </div>
+                <p className="text-xs text-gray-500">Review your details before submitting</p>
               </div>
-              <ul className="p-5 space-y-3 text-sm">
+
+              {/* Dashed separator mimicking a receipt tear line */}
+              <div className="relative w-full overflow-hidden h-4 -mt-2 -mb-2 z-10 flex items-center">
+                <div className="absolute -left-2 w-4 h-4 rounded-full bg-gray-50 border border-gray-100"></div>
+                <div className="absolute -right-2 w-4 h-4 rounded-full bg-gray-50 border border-gray-100"></div>
+                <div className="w-full border-t-2 border-dashed border-gray-200 mx-2"></div>
+              </div>
+
+              <ul className="px-6 py-4">
                 <SummaryRow label="Category" value={service.title} filled />
                 <SummaryRow label="Issue" value={option.title} filled />
                 {needs.description && (
@@ -634,28 +584,30 @@ function DetailsScreen({
                 )}
               </ul>
 
-              <div className="px-5 pb-5">
+              <div className="px-6 pb-7 pt-5 bg-gray-50/80 border-t border-dashed border-gray-200">
                 <button
                   onClick={onSubmit}
                   disabled={!canSubmit || loading}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                  className="group relative w-full flex items-center justify-center gap-2 py-4 px-4 rounded-xl text-[15px] font-black text-white bg-[#990000] hover:bg-[#7a0000] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-[0_4px_14px_rgba(153,0,0,0.3)] disabled:shadow-none overflow-hidden"
                 >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                   {loading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>
+                    <><Loader2 className="w-5 h-5 animate-spin" /> Submitting…</>
                   ) : (
-                    <><Send className="w-4 h-4" /> Submit Grievance</>
+                    <><Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" /> Submit Grievance</>
                   )}
                 </button>
-                <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                <p className="text-[11px] text-gray-400 mt-3 text-center leading-relaxed px-2">
                   By submitting, you confirm the information above is accurate.
                 </p>
               </div>
             </div>
 
-            <div className="bg-[#E5C77A]/15 border border-[#E5C77A] rounded-2xl p-4 text-xs text-[#806B3E] leading-relaxed">
-              <strong>Need help?</strong> Call our toll-free helpline at{' '}
-              <strong className="whitespace-nowrap">1800-XXX-XXXX</strong>, or visit the
-              MLA's office in Mylapore between 10 am – 5 pm.
+            <div className="bg-[#FFD700]/10 border-l-4 border-[#FFD700] rounded-r-xl p-5 shadow-sm">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <strong>Need help?</strong> Call our helpline at{' '}
+                <strong className="text-[#990000] whitespace-nowrap">1800-XXX-XXXX</strong>, or visit the MLA's office.
+              </p>
             </div>
           </div>
         </aside>
@@ -744,7 +696,7 @@ function SuccessScreen({
             </button>
             <button
               onClick={onAnother}
-              className="py-3 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] transition-colors shadow-sm"
+              className="py-3 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] transition-colors shadow-sm"
             >
               File Another
             </button>
@@ -781,78 +733,75 @@ function Crumb({ children, done, active, disabled, onClick }) {
   )
 }
 
-/**
- * E-commerce style product card.
- *
- * Vertical layout: image-area on top (square, gray-tinted, scales on hover),
- * body with title + 2-line description, and a gold action footer that doubles
- * as the affordance (Amazon/Flipkart-style). The whole card is one big
- * clickable button so a tap anywhere navigates forward.
- */
 function GridCard({ iconUrl, fallbackInitial, title, subtitle, onClick }) {
   return (
-    <button
+    <div
       onClick={onClick}
-      className="group flex flex-col bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-[#E5C77A] hover:shadow-xl hover:-translate-y-1 transition-all duration-200 text-left"
+      className="group relative w-full aspect-square cursor-pointer [perspective:1500px]"
     >
-      {/* Product image — fills a 1:1 square box edge-to-edge.
-          `object-cover` makes square logos and portraits fill cleanly without
-          letterbox gaps; the gentle scale-up on hover gives a gallery feel. */}
-      <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden border-b border-gray-100 group-hover:from-[#E5C77A]/15 group-hover:to-[#E5C77A]/5 transition-colors">
-        {iconUrl ? (
-          <img
-            src={iconUrl}
-            alt={title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full grid place-items-center text-[#990000] text-5xl font-black">
-            {fallbackInitial}
+      <div className="w-full h-full relative transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+        
+        {/* FRONT SIDE */}
+        <div className="absolute inset-0 w-full h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm [backface-visibility:hidden] flex items-center justify-center p-2 bg-gradient-to-br from-gray-50 to-gray-100">
+          {iconUrl ? (
+            <img
+              src={iconUrl}
+              alt={title}
+              className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full grid place-items-center text-[#990000] text-7xl font-black opacity-30">
+              {fallbackInitial}
+            </div>
+          )}
+        </div>
+
+        {/* BACK SIDE */}
+        <div className="absolute inset-0 w-full h-full bg-[#FFE600] border-4 border-[#990000] rounded-2xl overflow-hidden shadow-2xl [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col p-4 sm:p-6 text-center relative">
+          
+          {/* Glossy Shine Effect */}
+          <div className="absolute inset-0 -translate-x-[150%] group-hover:translate-x-[150%] bg-gradient-to-tr from-transparent via-white/60 to-transparent transition-transform duration-[1200ms] ease-in-out z-10 pointer-events-none"></div>
+
+          <div className="flex-1 flex flex-col items-center justify-center relative z-20">
+            <h3 className="font-black text-[#990000] text-[18px] sm:text-[20px] leading-tight mb-2 line-clamp-3">
+              {title}
+            </h3>
+            {subtitle && (
+              <p className="text-[12px] sm:text-[13px] font-bold text-[#990000]/80 leading-snug line-clamp-3 mb-4">
+                {subtitle}
+              </p>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Body */}
-      <div className="flex-1 flex flex-col p-4 md:p-5">
-        <h3 className="font-black text-gray-800 text-[15px] leading-tight mb-1.5 line-clamp-2">
-          {title}
-        </h3>
-        {subtitle && (
-          <p className="text-[12px] text-gray-500 leading-snug line-clamp-2 mb-4">
-            {subtitle}
-          </p>
-        )}
-
-        {/* Footer button — sticks to bottom regardless of body height */}
-        <div className="mt-auto pt-1">
-          <div className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-md text-[12px] font-bold text-[#806B3E] bg-[#E5C77A]/40 group-hover:bg-[#E5C77A] transition-colors">
-            Select
-            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          <div className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 sm:py-3.5 px-4 rounded-xl text-[14px] sm:text-[15px] font-black text-white bg-[#990000] shadow-[0_4px_14px_rgba(153,0,0,0.4)] hover:scale-105 transition-transform duration-300 relative z-20">
+            Select Issue
+            <ChevronRight className="w-4 h-4" />
           </div>
         </div>
+        
       </div>
-    </button>
+    </div>
   )
 }
 
 function SelectionChip({ iconUrl, fallbackInitial, label, onChange }) {
   return (
-    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E5C77A]/25 border border-[#E5C77A]">
-      <span className="w-6 h-6 rounded-full bg-white grid place-items-center overflow-hidden p-0.5 border border-black/5">
+    <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white shadow-sm border border-gray-100 transition-all hover:shadow-md">
+      <span className="w-6 h-6 rounded-full bg-gray-50 grid place-items-center overflow-hidden p-0.5 border border-black/5">
         {iconUrl ? (
           <img src={iconUrl} alt={label} className="w-full h-full object-contain" />
         ) : (
-          <span className="text-[#806B3E] text-[10px] font-bold">{fallbackInitial}</span>
+          <span className="text-[#990000] text-[10px] font-bold">{fallbackInitial}</span>
         )}
       </span>
-      <span className="text-xs font-bold text-[#806B3E]">{label}</span>
+      <span className="text-[13px] font-bold text-gray-800">{label}</span>
       <button
         type="button"
         onClick={onChange}
-        className="text-[10px] font-bold text-[#806B3E]/70 hover:text-[#806B3E] inline-flex items-center gap-0.5 pl-1"
+        className="text-[10px] font-bold text-gray-400 hover:text-[#990000] inline-flex items-center gap-0.5 pl-1 transition-colors"
       >
-        <Pencil className="w-3 h-3" />
+        <Pencil className="w-3.5 h-3.5" />
       </button>
     </span>
   )
@@ -860,16 +809,16 @@ function SelectionChip({ iconUrl, fallbackInitial, label, onChange }) {
 
 function FieldCard({ label, required, hint, children }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 md:p-6 shadow-sm">
-      <label className="block text-xs font-black text-gray-700 uppercase tracking-wide mb-1">
-        {label}{' '}
+    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-[0_2px_12px_rgb(0,0,0,0.04)] border border-gray-50/50">
+      <label className="flex items-center gap-2 text-sm font-black text-gray-800 uppercase tracking-wider mb-1.5">
+        {label}
         {required ? (
-          <span className="text-[#990000]">*</span>
+          <span className="text-[#990000] text-lg leading-none mt-1">*</span>
         ) : (
-          <span className="text-gray-400 font-normal normal-case">(optional)</span>
+          <span className="text-gray-400 font-medium normal-case text-xs tracking-normal mt-0.5">(optional)</span>
         )}
       </label>
-      {hint && <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">{hint}</p>}
+      {hint && <p className="text-[12px] text-gray-500 mb-5 leading-relaxed">{hint}</p>}
       {children}
     </div>
   )
@@ -879,11 +828,11 @@ function PhotoUploader({ imagePreview, onChange, onRemove }) {
   if (imagePreview) {
     return (
       <div className="relative inline-block w-full">
-        <img src={imagePreview} alt="Preview" className="w-full max-h-72 object-cover rounded-lg border border-gray-200" />
+        <img src={imagePreview} alt="Preview" className="w-full max-h-[300px] object-cover rounded-2xl border border-gray-100 shadow-sm" />
         <button
           type="button"
           onClick={onRemove}
-          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#990000] text-white grid place-items-center shadow-md hover:bg-[#7a0000]"
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#990000] text-white grid place-items-center shadow-lg hover:bg-[#7a0000] transition-colors hover:scale-105"
         >
           <X className="w-4 h-4" />
         </button>
@@ -891,10 +840,14 @@ function PhotoUploader({ imagePreview, onChange, onRemove }) {
     )
   }
   return (
-    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg p-8 cursor-pointer hover:border-[#E5C77A] hover:bg-[#E5C77A]/10 transition-all">
-      <Camera className="w-7 h-7 text-gray-400" />
-      <span className="text-sm text-gray-600 font-semibold">Click to upload a photo</span>
-      <span className="text-[11px] text-gray-400">PNG / JPG, max 10 MB</span>
+    <label className="group flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-200 rounded-2xl p-10 cursor-pointer bg-gray-50/50 hover:border-[#990000]/40 hover:bg-[#990000]/5 transition-all duration-300">
+      <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+        <Camera className="w-5 h-5 text-gray-400 group-hover:text-[#990000] transition-colors" />
+      </div>
+      <div className="text-center">
+        <span className="block text-[15px] text-gray-700 font-bold group-hover:text-[#990000] transition-colors">Click to upload a photo</span>
+        <span className="block text-xs text-gray-400 mt-1">PNG / JPG, max 10 MB</span>
+      </div>
       <input type="file" accept="image/*" className="hidden" onChange={onChange} />
     </label>
   )
@@ -902,18 +855,18 @@ function PhotoUploader({ imagePreview, onChange, onRemove }) {
 
 function SummaryRow({ label, value, filled }) {
   return (
-    <li className="flex items-start gap-2.5">
-      <span
-        className={`w-4 h-4 rounded-full grid place-items-center flex-shrink-0 mt-0.5 ${
-          filled ? 'bg-[#E5C77A]' : 'border border-gray-300 bg-white'
-        }`}
-      >
-        {filled && <CheckCircle2 className="w-3 h-3 text-[#806B3E]" />}
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{label}</div>
-        <div className={`text-sm mt-0.5 truncate ${filled ? 'text-gray-800 font-semibold' : 'text-gray-400 italic'}`}>
-          {value || 'Pending'}
+    <li className="flex flex-col gap-1 py-3 border-b border-dashed border-gray-100 last:border-0 last:pb-1">
+      <div className="text-[10px] uppercase tracking-widest font-black text-gray-400">{label}</div>
+      <div className="flex items-start gap-2.5">
+        <span
+          className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+            filled ? 'bg-green-100 text-green-600' : 'border-2 border-dashed border-gray-200 bg-transparent text-transparent'
+          }`}
+        >
+          {filled && <CheckCircle2 className="w-3.5 h-3.5" />}
+        </span>
+        <div className={`text-[14px] leading-snug break-words ${filled ? 'text-gray-800 font-bold' : 'text-gray-400 font-medium italic'}`}>
+          {value || 'Pending details...'}
         </div>
       </div>
     </li>

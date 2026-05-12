@@ -247,7 +247,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm mt-4"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm mt-4"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue'}
               </button>
@@ -275,7 +275,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm mt-4"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm mt-4"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue'}
               </button>
@@ -353,7 +353,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={requestOtp}
                 disabled={busy}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm & Send OTP'}
               </button>
@@ -429,7 +429,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={busy || otp.length !== 6}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Create Account'}
               </button>
@@ -545,7 +545,7 @@ function FieldGender({ value, onChange }) {
             onClick={() => onChange({ target: { value: g } })}
             className={`py-3 rounded-md text-sm font-bold border-2 transition-all ${
               value === g
-                ? 'bg-[#E5C77A] text-[#806B3E] border-[#E5C77A] shadow-sm'
+                ? 'bg-[#FFD700] text-[#990000] border-[#FFD700] shadow-sm'
                 : 'bg-gray-100/50 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700'
             }`}
           >

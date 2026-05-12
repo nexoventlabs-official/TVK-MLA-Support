@@ -147,7 +147,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy || phone.length !== 10}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send OTP'}
               </button>
@@ -196,7 +196,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy || otp.length !== 6}
-                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#806B3E] bg-[#E5C77A] hover:bg-[#D4B363] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="w-full flex items-center justify-center py-4 px-4 rounded-md text-sm font-bold text-[#990000] bg-[#FFD700] hover:bg-[#E6C200] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Sign In'}
               </button>
