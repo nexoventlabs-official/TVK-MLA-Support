@@ -10,6 +10,7 @@ import GrievanceHome from './pages/GrievanceHome'
 import MyGrievances from './pages/MyGrievances'
 import GrievanceDetail from './pages/GrievanceDetail'
 import EventsPage from './pages/EventsPage'
+import EventDetailPage from './pages/EventDetailPage'
 
 /* ─── route gates ─────────────────────────────────────────────────── */
 
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/my-grievances"            element={<Protected><MyGrievances    /></Protected>} />
           <Route path="/my-grievances/:ticketId" element={<Protected><GrievanceDetail /></Protected>} />
           <Route path="/events"                  element={<EventsPage />} />
+          <Route path="/events/:id"              element={<EventDetailPage />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

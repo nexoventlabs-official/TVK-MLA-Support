@@ -31,6 +31,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 const Member = require('../models/Member');
 const ServiceRequest = require('../models/ServiceRequest');
@@ -806,6 +807,25 @@ router.get('/events', async (_req, res) => {
       .limit(20)
       .lean();
     res.json({ events });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /events/:id — public single-event lookup for the citizen portal's
+ * Event Detail page. Only active events are exposed; past/inactive events
+ * 404 so we never surface stale or hidden announcements through the public
+ * surface.
+ */
+router.get('/events/:id', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    const event = await Event.findOne({ _id: req.params.id, active: true }).lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    res.json({ event });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -151,16 +151,31 @@ function EventCard({ event }) {
   const isToday  = startsIn === 'Today' || startsIn === 'Happening now'
 
   return (
-    <article className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:border-[#990000]/30 hover:shadow-lg transition-all h-full flex flex-col">
-      {/* Banner image — 16:9 like the admin panel */}
-      <div className="aspect-[16/9] bg-gradient-to-br from-gray-100 to-gray-50 overflow-hidden border-b border-gray-100 relative">
+    <Link
+      to={`/events/${event._id}`}
+      className="group block bg-white rounded-2xl border border-gray-200 overflow-hidden hover:border-[#990000]/30 hover:shadow-lg transition-all h-full flex flex-col"
+    >
+      {/* Banner image — 16:9 frame with `object-contain` so the full uploaded
+          image is visible (no cropping). The faint gradient plus a soft
+          backdrop image provide a clean letterbox when aspect ratios mismatch. */}
+      <div className="aspect-[16/9] bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden border-b border-gray-100 relative">
         {event.image ? (
-          <img
-            src={event.image}
-            alt={event.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
+          <>
+            {/* Blurred backdrop fills the letterbox area in the same colours
+                as the photo so it doesn't feel like there's wasted space. */}
+            <img
+              src={event.image}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40"
+            />
+            <img
+              src={event.image}
+              alt={event.title}
+              className="relative w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-300"
+              loading="lazy"
+            />
+          </>
         ) : (
           <div className="w-full h-full grid place-items-center text-gray-300">
             <ImageIcon className="w-12 h-12" />
@@ -170,7 +185,7 @@ function EventCard({ event }) {
         {/* "Starts in" pill — top-left overlay */}
         {startsIn && (
           <span
-            className={`absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest font-black backdrop-blur-sm border ${
+            className={`absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest font-black backdrop-blur-sm border z-10 ${
               isToday
                 ? 'bg-[#990000] text-white border-[#990000]'
                 : 'bg-white/90 text-[#990000] border-white'
@@ -184,7 +199,7 @@ function EventCard({ event }) {
 
       {/* Body */}
       <div className="p-5 flex-1 flex flex-col">
-        <h3 className="text-base font-black text-gray-900 tracking-tight leading-snug mb-2 line-clamp-2">
+        <h3 className="text-base font-black text-gray-900 tracking-tight leading-snug mb-2 line-clamp-2 group-hover:text-[#990000] transition-colors">
           {event.title}
         </h3>
 
@@ -202,11 +217,15 @@ function EventCard({ event }) {
         </div>
 
         {event.description && (
-          <p className="text-sm text-gray-600 leading-relaxed line-clamp-4 whitespace-pre-wrap">
+          <p className="text-sm text-gray-600 leading-relaxed line-clamp-3 whitespace-pre-wrap mb-3">
             {event.description}
           </p>
         )}
+
+        <div className="mt-auto pt-2 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-[#990000]">
+          View Details <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        </div>
       </div>
-    </article>
+    </Link>
   )
 }
