@@ -127,27 +127,25 @@ function buildRegistrationFlowJSON() {
           dob_label: { type: 'string', __example__: '15-05-1990' },
         },
         layout: {
+          // Meta requires RichText to be paired only with Footer on the same
+          // screen, so the heading and intro paragraph are folded into the
+          // markdown body itself instead of being separate components.
           type: 'SingleColumnLayout',
           children: [
-            { type: 'TextHeading', text: 'Confirm Your Details' },
-            {
-              type: 'TextBody',
-              text:
-                'We found the following voter record. Please confirm to complete registration.',
-            },
             {
               type: 'RichText',
-              text: [
-                '| **Field** | **Value** |',
-                '| :--- | :--- |',
-                '| Name | **${data.voter_name}** |',
-                '| EPIC Number | ${data.epic_no} |',
-                '| ${data.relation_label} | ${data.relation_name} |',
-                '| Gender | ${data.gender} |',
-                '| Date of Birth | ${data.dob_label} |',
-                '| House No | ${data.house_no} |',
+              text:
+                '# Confirm Your Details\n\n' +
+                'We found the following voter record. Please confirm to complete registration.\n\n' +
+                '| **Field** | **Value** |\n' +
+                '| :--- | :--- |\n' +
+                '| Name | **${data.voter_name}** |\n' +
+                '| EPIC Number | ${data.epic_no} |\n' +
+                '| ${data.relation_label} | ${data.relation_name} |\n' +
+                '| Gender | ${data.gender} |\n' +
+                '| Date of Birth | ${data.dob_label} |\n' +
+                '| House No | ${data.house_no} |\n' +
                 '| Assembly | ${data.assembly} |',
-              ],
             },
             {
               type: 'Footer',

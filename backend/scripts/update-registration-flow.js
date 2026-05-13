@@ -16,8 +16,13 @@ const { setKeys } = require('./_envFile');
   }
   try {
     console.log(`• Uploading registration flow JSON to ${flowId}…`);
-    await meta.updateFlowJSON(flowId, buildRegistrationFlowJSON());
-    console.log('✅ Registration flow JSON uploaded');
+    const res = await meta.updateFlowJSON(flowId, buildRegistrationFlowJSON());
+    if (res?.validation_errors?.length) {
+      console.warn('⚠️  Validation warnings:');
+      console.warn(JSON.stringify(res.validation_errors, null, 2));
+    } else {
+      console.log('✅ Registration flow JSON uploaded with no validation warnings');
+    }
   } catch (err) {
     console.error('❌ upload failed:', err.response?.data || err.message);
     process.exit(1);
