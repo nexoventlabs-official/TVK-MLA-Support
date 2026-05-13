@@ -481,7 +481,10 @@ function DetailsScreen({
           uncropped via `object-contain` inside a 3:1 frame, on a plain
           white background. Any letterbox bars stay white so the image's
           colour palette never bleeds into the surrounding chrome. */}
-      <header className="relative w-full bg-white border-b border-gray-200 overflow-hidden">
+      <header
+        className="relative w-full border-b border-gray-200 overflow-hidden"
+        style={{ backgroundColor: service?.id === 'civic_works' ? '#fdf4e0' : '#ffffff' }}
+      >
         {action?.headerUrl ? (
           <div className="relative w-full aspect-[1200/400] max-h-[360px]">
             <img
