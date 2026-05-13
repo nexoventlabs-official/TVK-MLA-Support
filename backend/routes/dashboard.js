@@ -15,6 +15,27 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TIMELINE_DAYS = 30;
 const HEATMAP_DAYS = 60;
 
+// All date bucketing on the admin dashboard (timeline, weekday × hour
+// heatmap, service × weekday heatmap, member growth) is rendered for
+// admins in Mylapore, so it MUST be computed in IST — otherwise an
+// event at 22:30 IST gets bucketed as 17:00 UTC the previous day and
+// the heatmap reads two cells off. India has no DST, so a fixed zone
+// string is safe.
+const TZ_IST = 'Asia/Kolkata';
+
+// Build a yyyy-mm-dd key from a Date in the IST wall clock. The
+// 'en-CA' locale always returns ISO-style YYYY-MM-DD which lines up
+// with what `$dateToString { format: '%Y-%m-%d', timezone: TZ_IST }`
+// produces on the Mongo side, so the JS-side fill loop and the
+// aggregation result use the same lookup keys.
+const istDateKeyFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TZ_IST,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+const istDateKey = (d) => istDateKeyFmt.format(d);
+
 router.get('/stats', auth, async (_req, res) => {
   try {
     const now = new Date();
@@ -59,7 +80,7 @@ router.get('/stats', auth, async (_req, res) => {
         { $match: { createdAt: { $gte: timelineSince } } },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: TZ_IST } },
             count: { $sum: 1 },
           },
         },
@@ -72,9 +93,11 @@ router.get('/stats', auth, async (_req, res) => {
             _id: {
               // Mongo $dayOfWeek returns 1=Sunday … 7=Saturday.
               // We re-map on the client to put Mon first, but the
-              // raw value travels over the wire as-is.
-              dow: { $dayOfWeek: '$createdAt' },
-              hour: { $hour: '$createdAt' },
+              // raw value travels over the wire as-is. Both dow + hour
+              // are bucketed in IST so an admin in Chennai sees "7pm
+              // ticket" land at 19:00, not 13:30 (UTC).
+              dow: { $dayOfWeek: { date: '$createdAt', timezone: TZ_IST } },
+              hour: { $hour: { date: '$createdAt', timezone: TZ_IST } },
             },
             count: { $sum: 1 },
           },
@@ -89,7 +112,7 @@ router.get('/stats', auth, async (_req, res) => {
           $group: {
             _id: {
               svc: '$serviceId',
-              dow: { $dayOfWeek: '$createdAt' },
+              dow: { $dayOfWeek: { date: '$createdAt', timezone: TZ_IST } },
             },
             count: { $sum: 1 },
           },
@@ -102,7 +125,7 @@ router.get('/stats', auth, async (_req, res) => {
         { $match: { createdAt: { $gte: timelineSince } } },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: TZ_IST } },
             count: { $sum: 1 },
           },
         },
@@ -121,16 +144,16 @@ router.get('/stats', auth, async (_req, res) => {
 
     // Backfill missing days with zero so the line chart has continuous
     // X-axis ticks even on a quiet office (instead of jumping over
-    // dead days, which makes a dashboard read like a lie).
+    // dead days, which makes a dashboard read like a lie). The keys
+    // are formatted in IST to match the aggregation output above —
+    // building them via getUTCFullYear/Month/Date here would silently
+    // miss the 5h30m wrap-around the day's last few tickets fall on.
     const fillDailySeries = (raw, days) => {
       const lookup = Object.fromEntries(raw.map((x) => [x._id, x.count]));
       const out = [];
       for (let i = days - 1; i >= 0; i -= 1) {
         const d = new Date(now.getTime() - i * DAY_MS);
-        const yyyy = d.getUTCFullYear();
-        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const dd = String(d.getUTCDate()).padStart(2, '0');
-        const key = `${yyyy}-${mm}-${dd}`;
+        const key = istDateKey(d);
         out.push({ date: key, count: lookup[key] || 0 });
       }
       return out;

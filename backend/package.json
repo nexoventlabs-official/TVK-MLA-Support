@@ -15,7 +15,8 @@
     "reg:create": "node scripts/create-registration-flow.js",
     "reg:update": "node scripts/update-registration-flow.js",
     "seed:admin": "node scripts/seed-admin.js",
-    "templates:sync": "node scripts/sync-templates.js"
+    "templates:sync": "node scripts/sync-templates.js",
+    "reset:test-data": "node scripts/reset-test-data.js"
   },
   "dependencies": {
     "axios": "^1.7.7",
