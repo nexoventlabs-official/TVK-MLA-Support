@@ -31,13 +31,30 @@ import LocationPicker from '../components/LocationPicker'
 const DEFAULT_KIND = 'ticket'
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
+/**
+ * Field requirements per action kind, kept in lock-step with the WhatsApp
+ * Flow contract (`backend/services/issueActions.js` and the DETAILS schema
+ * at `backend/services/flowJson.js`). The keys are:
+ *
+ *   description  — required textarea
+ *   location     — required map picker (live geo)
+ *   locationText — optional free-text Location / Address field (mirrors
+ *                  the WhatsApp DETAILS form's optional `location` input)
+ *   photo        — required photo upload
+ *   ticket       — whether this option creates a ticket at all
+ *
+ * IMPORTANT: keep this table aligned with the WhatsApp flow. Adding an
+ * extra field here that the bot does not collect creates a UX divergence
+ * (e.g. previously the web asked for a photo on `details_then_url` issues
+ * like "New PHC" while the bot did not).
+ */
 const KIND_NEEDS = {
-  url:                    { description: false, location: false, photo: false, ticket: false },
-  pdf:                    { description: false, location: false, photo: false, ticket: false },
-  ticket:                 { description: true,  location: false, photo: false, ticket: true },
-  details_then_url:       { description: true,  location: false, photo: false, ticket: true },
-  location_only_ticket:   { description: false, location: true,  photo: false, ticket: true },
-  location_photos_ticket: { description: false, location: true,  photo: true,  ticket: true },
+  url:                    { description: false, location: false, locationText: false, photo: false, ticket: false },
+  pdf:                    { description: false, location: false, locationText: false, photo: false, ticket: false },
+  ticket:                 { description: true,  location: false, locationText: true,  photo: false, ticket: true  },
+  details_then_url:       { description: true,  location: false, locationText: true,  photo: false, ticket: true  },
+  location_only_ticket:   { description: false, location: true,  locationText: false, photo: false, ticket: true  },
+  location_photos_ticket: { description: false, location: true,  locationText: false, photo: true,  ticket: true  },
 }
 
 const SCREEN = {
@@ -541,6 +558,22 @@ function DetailsScreen({
             </FieldCard>
           )}
 
+          {/* Optional free-text location for ticket / details_then_url kinds.
+              Matches the WhatsApp DETAILS form's optional `location` input —
+              user types a village / town / address rather than dropping a pin. */}
+          {needs.locationText && (
+            <FieldCard label="Location / Address" hint="Optional — village, town, or area where this issue is happening.">
+              <input
+                type="text"
+                className="w-full bg-gray-100/50 border-2 border-gray-200 rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#E5C77A] transition-colors text-gray-800"
+                placeholder="e.g. Mylapore, Chennai"
+                value={location.text}
+                onChange={(e) => e.target.value.length <= 200 && onLocationSelect({ text: e.target.value, lat: null, lng: null })}
+                maxLength={200}
+              />
+            </FieldCard>
+          )}
+
           {needs.location && (
             <FieldCard label="Location" required hint="Pin the issue on the map or share your live location.">
               <LocationPicker onLocationSelect={onLocationSelect} />
@@ -555,13 +588,6 @@ function DetailsScreen({
 
           {needs.photo && (
             <FieldCard label="Issue photo" required hint="A photo helps the MLA's team verify and act faster. PNG / JPG, max 10 MB.">
-              <PhotoUploader imagePreview={imagePreview} onChange={onImageChange} onRemove={onImageRemove} />
-            </FieldCard>
-          )}
-
-          {/* Optional photo on description-only flows */}
-          {!needs.photo && (kind === 'ticket' || kind === 'details_then_url') && (
-            <FieldCard label="Attach a photo" hint="Optional — include any picture that helps explain the issue. Max 10 MB.">
               <PhotoUploader imagePreview={imagePreview} onChange={onImageChange} onRemove={onImageRemove} />
             </FieldCard>
           )}
@@ -613,8 +639,12 @@ function DetailsScreen({
                     filled={!!schoolName.trim()}
                   />
                 )}
-                {needs.location && (
-                  <SummaryRow label="Location" value={location.text || null} filled={!!location.text} />
+                {(needs.location || needs.locationText) && (
+                  <SummaryRow
+                    label="Location"
+                    value={location.text || (needs.locationText ? 'Optional' : null)}
+                    filled={!!location.text}
+                  />
                 )}
                 {needs.photo && (
                   <SummaryRow label="Photo" value={imagePreview ? 'Attached' : null} filled={!!imagePreview} />
