@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "TVK Mylapore",
+    "slug": "tvk-mylapore",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#173628"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "in.tvk.mylapore",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "TVK Mylapore needs your location to attach the spot of your grievance so we can dispatch field teams to the right place.",
+        "NSCameraUsageDescription": "TVK Mylapore needs camera access so you can attach photos to your grievance.",
+        "NSPhotoLibraryUsageDescription": "TVK Mylapore needs gallery access so you can attach photos to your grievance."
+      }
+    },
+    "android": {
+      "package": "in.tvk.mylapore",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
+    },
+    "web": {},
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow TVK Mylapore to use your location to tag grievances."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow TVK Mylapore to access your photos so you can attach images to grievances.",
+          "cameraPermission": "Allow TVK Mylapore to use your camera to capture grievance photos."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0b3d2e"
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "https://your-backend.example.com/api",
+      "eas": { "projectId": "" }
+    }
+  }
+}
