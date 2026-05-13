@@ -9,7 +9,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#173628"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -53,11 +55,16 @@
         {
           "color": "#0b3d2e"
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-secure-store"
     ],
     "extra": {
       "apiBaseUrl": "https://your-backend.example.com/api",
-      "eas": { "projectId": "" }
+      "eas": {
+        "projectId": ""
+      }
     }
   }
 }
