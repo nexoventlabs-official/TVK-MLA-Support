@@ -474,58 +474,90 @@ function DetailsScreen({
 
   // Ticket-creating flows.
   return (
-    <section>
-      <button
-        onClick={onBack}
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 font-semibold mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" /> Back to issues
-      </button>
+    <section className="-mt-8 md:-mt-10 -mx-4 sm:-mx-8 lg:-mx-12">
 
-      <div className="mb-6 max-w-3xl">
-        <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#990000] mb-1">
+      {/* ─── Full-bleed hero banner ──────────────────────────────────
+          The admin-uploaded `header_*` Cloudinary image is rendered
+          uncropped via `object-contain` so the whole banner is always
+          visible. A blurred copy fills the letterbox so the area never
+          looks empty when the banner aspect ratio differs from the
+          frame's 3:1. */}
+      <header className="relative w-full bg-gradient-to-br from-gray-100 via-white to-gray-100 border-b border-gray-200 overflow-hidden">
+        {action?.headerUrl ? (
+          <div className="relative w-full aspect-[1200/400] max-h-[360px]">
+            <img
+              src={action.headerUrl}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40"
+            />
+            <img
+              src={action.headerUrl}
+              alt={option.title}
+              className="relative w-full h-full object-contain mx-auto"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="h-24 md:h-32 grid place-items-center">
+            <span className="text-[10px] font-black uppercase tracking-[3px] text-gray-400">
+              {service.title} · {option.title}
+            </span>
+          </div>
+        )}
+
+        {/* Floating Back chip — anchored to the banner so it never feels orphaned. */}
+        <button
+          onClick={onBack}
+          className="absolute top-3 left-3 sm:top-4 sm:left-4 inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-sm border border-gray-200 px-3 py-1.5 rounded-full text-xs font-bold text-gray-700 hover:text-[#990000] hover:border-[#990000]/30 transition-colors shadow-sm z-10"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to issues
+        </button>
+
+        {/* Step pill — anchored top-right, mirrors the back chip. */}
+        <span className="absolute top-3 right-3 sm:top-4 sm:right-4 inline-flex items-center gap-1.5 bg-[#990000] text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[2px] shadow-sm z-10">
           Step 3 of 3
-        </p>
-        <h2 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight mb-2">
-          Provide the details
-        </h2>
-        <p className="text-gray-500 text-sm md:text-base">
-          Fill in the fields below — marked fields are required.
-        </p>
-      </div>
+        </span>
+      </header>
 
-      {/* Selection chips */}
-      <div className="flex flex-wrap items-center gap-2 mb-8">
-        <SelectionChip
-          iconUrl={service.iconUrl}
-          fallbackInitial={service.title?.charAt(0) || '?'}
-          label={service.title}
-          onChange={onChangeCategory}
-        />
-        <ChevronRight className="w-4 h-4 text-gray-300" />
-        <SelectionChip
-          iconUrl={option.iconUrl}
-          fallbackInitial="?"
-          label={option.title}
-          onChange={onBack}
-        />
-      </div>
+      {/* ─── Page body — restore the parent padding inside a constrained wrapper ─── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-8 md:pt-10 pb-10">
 
-      {/* 2-column desktop / 1-column mobile — form on left, summary on right */}
-      <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          {action?.headerUrl && (
-            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
-              <img
-                src={action.headerUrl}
-                alt={option.title}
-                className="w-full h-32 md:h-40 object-cover"
-                loading="lazy"
-              />
-            </div>
-          )}
+        {/* Title block */}
+        <div className="mb-6 max-w-3xl">
+          <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#990000] mb-1.5">
+            {service.title}
+          </p>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight mb-2">
+            {option.title}
+          </h2>
+          <p className="text-gray-500 text-sm md:text-base">
+            Fill in the fields below — required fields are marked.
+          </p>
+        </div>
 
-          {needs.description && (
+        {/* Selection chips (edit) */}
+        <div className="flex flex-wrap items-center gap-2 mb-8">
+          <SelectionChip
+            iconUrl={service.iconUrl}
+            fallbackInitial={service.title?.charAt(0) || '?'}
+            label={service.title}
+            onChange={onChangeCategory}
+          />
+          <ChevronRight className="w-4 h-4 text-gray-300" />
+          <SelectionChip
+            iconUrl={option.iconUrl}
+            fallbackInitial="?"
+            label={option.title}
+            onChange={onBack}
+          />
+        </div>
+
+        {/* 2-column desktop / 1-column mobile — form on left, summary on right */}
+        <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="lg:col-span-2 space-y-6">
+
+            {needs.description && (
             <FieldCard label="Description" required hint="Describe the issue in detail so we can act on it faster.">
               <div className="relative">
                 <textarea
@@ -678,6 +710,7 @@ function DetailsScreen({
             </div>
           </div>
         </aside>
+        </div>
       </div>
     </section>
   )
