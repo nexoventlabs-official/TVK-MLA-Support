@@ -109,6 +109,10 @@ function buildRegistrationFlowJSON() {
       },
 
       // ─── REG_CONFIRM ───
+      // Voter record returned by the EPIC lookup. Rendered as a markdown
+      // table via WhatsApp Flow's RichText component so the screen reads
+      // like a receipt — no banner image, no decorative chrome, just the
+      // facts the user is being asked to confirm.
       {
         id: 'REG_CONFIRM',
         title: 'Confirm',
@@ -131,20 +135,20 @@ function buildRegistrationFlowJSON() {
               text:
                 'We found the following voter record. Please confirm to complete registration.',
             },
-            { type: 'TextCaption', text: 'Name' },
-            { type: 'TextSubheading', text: '${data.voter_name}' },
-            { type: 'TextCaption', text: 'EPIC Number' },
-            { type: 'TextBody', text: '${data.epic_no}' },
-            { type: 'TextCaption', text: '${data.relation_label}' },
-            { type: 'TextBody', text: '${data.relation_name}' },
-            { type: 'TextCaption', text: 'Gender' },
-            { type: 'TextBody', text: '${data.gender}' },
-            { type: 'TextCaption', text: 'Date of Birth' },
-            { type: 'TextBody', text: '${data.dob_label}' },
-            { type: 'TextCaption', text: 'House No' },
-            { type: 'TextBody', text: '${data.house_no}' },
-            { type: 'TextCaption', text: 'Assembly' },
-            { type: 'TextBody', text: '${data.assembly}' },
+            {
+              type: 'RichText',
+              text: [
+                '| **Field** | **Value** |',
+                '| :--- | :--- |',
+                '| Name | **${data.voter_name}** |',
+                '| EPIC Number | ${data.epic_no} |',
+                '| ${data.relation_label} | ${data.relation_name} |',
+                '| Gender | ${data.gender} |',
+                '| Date of Birth | ${data.dob_label} |',
+                '| House No | ${data.house_no} |',
+                '| Assembly | ${data.assembly} |',
+              ],
+            },
             {
               type: 'Footer',
               label: 'Confirm & Register',
