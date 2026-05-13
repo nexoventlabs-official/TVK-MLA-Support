@@ -447,7 +447,6 @@ async function startLocationFlow(phone, { kind, serviceId, optionId, serviceTitl
     { upsert: true, setDefaultsOnInsert: true }
   );
 
-  const banner = await flowImages.getUrl(action.headerKey);
   const body =
     `📍 *Share your location*\n\n` +
     `To raise a *${optionTitle}* ticket, please share your *current location*.\n\n` +
@@ -460,12 +459,11 @@ async function startLocationFlow(phone, { kind, serviceId, optionId, serviceTitl
     '3️⃣ Send your *current location*\n\n' +
     'We are waiting for your location 🙏';
 
-  // Send the banner as a separate image first (location_request_message
-  // does NOT support a header image), then the native location request.
-  if (banner) {
-    await meta.sendImage(phone, banner, '').catch(() => {});
-  }
-
+  // The action's `header_*` banner is intentionally NOT sent here — the
+  // prompt should be a clean, single share-location request. The banner
+  // is reserved for the final ticket-confirmation message dispatched by
+  // pendingActionHandler.finaliseTicket() once the user has shared
+  // location (and photos, if required).
   try {
     await meta.sendLocationRequest(phone, body);
   } catch (err) {
