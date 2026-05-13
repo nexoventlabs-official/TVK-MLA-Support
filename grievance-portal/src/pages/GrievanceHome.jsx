@@ -478,19 +478,12 @@ function DetailsScreen({
 
       {/* ─── Full-bleed hero banner ──────────────────────────────────
           The admin-uploaded `header_*` Cloudinary image is rendered
-          uncropped via `object-contain` so the whole banner is always
-          visible. A blurred copy fills the letterbox so the area never
-          looks empty when the banner aspect ratio differs from the
-          frame's 3:1. */}
-      <header className="relative w-full bg-gradient-to-br from-gray-100 via-white to-gray-100 border-b border-gray-200 overflow-hidden">
+          uncropped via `object-contain` inside a 3:1 frame, on a plain
+          white background. Any letterbox bars stay white so the image's
+          colour palette never bleeds into the surrounding chrome. */}
+      <header className="relative w-full bg-white border-b border-gray-200 overflow-hidden">
         {action?.headerUrl ? (
           <div className="relative w-full aspect-[1200/400] max-h-[360px]">
-            <img
-              src={action.headerUrl}
-              alt=""
-              aria-hidden
-              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40"
-            />
             <img
               src={action.headerUrl}
               alt={option.title}
