@@ -113,40 +113,29 @@ function buildRegistrationFlowJSON() {
       // table via WhatsApp Flow's RichText component so the screen reads
       // like a receipt — no banner image, no decorative chrome, just the
       // facts the user is being asked to confirm.
+      //
+      // IMPORTANT: RichText only resolves a single whole-string ${data.x}
+      // binding — embedded references like `${data.voter_name}` inside the
+      // markdown body are NOT substituted and would render literally. So
+      // the entire confirmation markdown (heading + intro + filled table)
+      // is built on the server in flowEndpoint.js and shipped as one
+      // `confirm_md` string.
       {
         id: 'REG_CONFIRM',
         title: 'Confirm',
         data: {
-          voter_name: { type: 'string', __example__: 'Chitra' },
-          epic_no: { type: 'string', __example__: 'RJE0667071' },
-          relation_label: { type: 'string', __example__: 'Husband' },
-          relation_name: { type: 'string', __example__: 'Mohan' },
-          gender: { type: 'string', __example__: 'Female' },
-          house_no: { type: 'string', __example__: '1' },
-          assembly: { type: 'string', __example__: 'Mylapore (25)' },
-          dob_label: { type: 'string', __example__: '15-05-1990' },
+          confirm_md: {
+            type: 'string',
+            __example__:
+              '# Confirm Your Details\n\nWe found the following voter record. Please confirm to complete registration.\n\n| **Field** | **Value** |\n| :--- | :--- |\n| Name | **Chitra** |\n| EPIC Number | RJE0667071 |\n| Husband | Mohan |\n| Gender | Female |\n| Date of Birth | 15-05-1990 |\n| House No | 1 |\n| Assembly | Mylapore (25) |',
+          },
         },
         layout: {
           // Meta requires RichText to be paired only with Footer on the same
-          // screen, so the heading and intro paragraph are folded into the
-          // markdown body itself instead of being separate components.
+          // screen — so this screen has exactly two children.
           type: 'SingleColumnLayout',
           children: [
-            {
-              type: 'RichText',
-              text:
-                '# Confirm Your Details\n\n' +
-                'We found the following voter record. Please confirm to complete registration.\n\n' +
-                '| **Field** | **Value** |\n' +
-                '| :--- | :--- |\n' +
-                '| Name | **${data.voter_name}** |\n' +
-                '| EPIC Number | ${data.epic_no} |\n' +
-                '| ${data.relation_label} | ${data.relation_name} |\n' +
-                '| Gender | ${data.gender} |\n' +
-                '| Date of Birth | ${data.dob_label} |\n' +
-                '| House No | ${data.house_no} |\n' +
-                '| Assembly | ${data.assembly} |',
-            },
+            { type: 'RichText', text: '${data.confirm_md}' },
             {
               type: 'Footer',
               label: 'Confirm & Register',

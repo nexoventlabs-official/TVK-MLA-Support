@@ -852,18 +852,26 @@ async function handleRegDataExchange({ screen, data, flow_token }) {
           ? `${voter.assemblyName} (${voter.assemblyNo})`
           : voter.assemblyName || voter.assemblyNo || '—';
 
+      // Build the confirmation markdown server-side because RichText does
+      // not substitute ${data.x} references embedded inside its `text`
+      // body — only a whole-string binding (e.g. text: '${data.confirm_md}')
+      // is resolved. So the values get baked in here.
+      const confirmMd =
+        '# Confirm Your Details\n\n' +
+        'We found the following voter record. Please confirm to complete registration.\n\n' +
+        '| **Field** | **Value** |\n' +
+        '| :--- | :--- |\n' +
+        `| Name | **${voter.name || '—'}** |\n` +
+        `| EPIC Number | ${voter.epicNo || epic} |\n` +
+        `| ${relationLabel} | ${voter.relationName || '—'} |\n` +
+        `| Gender | ${voter.gender || '—'} |\n` +
+        `| Date of Birth | ${formatDobLabel(dob)} |\n` +
+        `| House No | ${voter.houseNo || '—'} |\n` +
+        `| Assembly | ${assemblyLabel} |`;
+
       return {
         screen: 'REG_CONFIRM',
-        data: {
-          voter_name: voter.name || '—',
-          epic_no: voter.epicNo || epic,
-          relation_label: relationLabel,
-          relation_name: voter.relationName || '—',
-          gender: voter.gender || '—',
-          house_no: voter.houseNo || '—',
-          assembly: assemblyLabel,
-          dob_label: formatDobLabel(dob),
-        },
+        data: { confirm_md: confirmMd },
       };
     }
   }
