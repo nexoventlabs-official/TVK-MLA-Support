@@ -986,6 +986,27 @@ router.post('/grievances', requireAuth, upload.single('image'), async (req, res)
     // the WhatsApp flow and the web portal.
     await Member.updateOne({ _id: req.portalUser._id }, { $inc: { requestCount: 1 } });
 
+    // Fan out a push to all admins with a registered Expo token. Fire-and-
+    // forget — never blocks the response.
+    setImmediate(async () => {
+      try {
+        const Admin = require('../models/Admin');
+        const { sendPush } = require('../services/expoPush');
+        const admins = await Admin.find({ 'pushTokens.0': { $exists: true } })
+          .select('pushTokens').lean();
+        const tokens = admins.flatMap((a) => (a.pushTokens || []).map((t) => t.token));
+        if (tokens.length) {
+          await sendPush(tokens, {
+            title: `New grievance · ${doc.ticketId}`,
+            body: `${doc.optionTitle || doc.serviceTitle || 'New ticket'} from ${doc.name || doc.phone}`,
+            data: { kind: 'new_grievance', ticketId: doc.ticketId, requestId: String(doc._id) },
+          });
+        }
+      } catch (err) {
+        console.warn('[portal] push fan-out skipped:', err.message);
+      }
+    });
+
     res.json({ ok: true, grievanceId: doc.ticketId, request: doc });
   } catch (err) {
     console.error('[portal] grievance create error:', err);

@@ -3,26 +3,23 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
 import LandingScreen from '../screens/user/LandingScreen';
-import Placeholder from '../screens/Placeholder';
+import NewGrievanceScreen from '../screens/user/NewGrievanceScreen';
+import MyGrievancesScreen from '../screens/user/MyGrievancesScreen';
+import GrievanceDetailScreen from '../screens/user/GrievanceDetailScreen';
+import EventsScreen from '../screens/user/EventsScreen';
+import EventDetailScreen from '../screens/user/EventDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const stub = (name, description) => (props) =>
-  <Placeholder {...props} name={name} description={description} />;
-
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
       <Stack.Screen name="Home" component={LandingScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="NewGrievance" options={{ title: 'Raise Grievance' }}>
-        {stub('Raise Grievance', 'Phase 2 — service catalog, photo capture, location, submit.')}
-      </Stack.Screen>
-      <Stack.Screen name="EventDetail" options={{ title: 'Event' }}>
-        {stub('Event details', 'Phase 2 — full event detail with directions + RSVP.')}
-      </Stack.Screen>
+      <Stack.Screen name="NewGrievance" component={NewGrievanceScreen} options={{ title: 'Raise Grievance' }} />
+      <Stack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Event' }} />
     </Stack.Navigator>
   );
 }
@@ -30,12 +27,8 @@ function HomeStack() {
 function GrievanceStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
-      <Stack.Screen name="MyGrievances" options={{ title: 'My Grievances' }}>
-        {stub('My Grievances', 'Phase 2 — list of your tickets with live status.')}
-      </Stack.Screen>
-      <Stack.Screen name="GrievanceDetail" options={{ title: 'Grievance' }}>
-        {stub('Grievance details', 'Phase 2 — full ticket detail with photos + timeline.')}
-      </Stack.Screen>
+      <Stack.Screen name="MyGrievances" component={MyGrievancesScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="GrievanceDetail" component={GrievanceDetailScreen} options={{ title: 'Grievance' }} />
     </Stack.Navigator>
   );
 }
@@ -43,12 +36,8 @@ function GrievanceStack() {
 function EventsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
-      <Stack.Screen name="Events" options={{ title: 'Events' }}>
-        {stub('Events', 'Phase 2 — upcoming events list.')}
-      </Stack.Screen>
-      <Stack.Screen name="EventDetail" options={{ title: 'Event' }}>
-        {stub('Event details', 'Phase 2 — full event detail.')}
-      </Stack.Screen>
+      <Stack.Screen name="Events" component={EventsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Event' }} />
     </Stack.Navigator>
   );
 }

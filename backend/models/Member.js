@@ -85,6 +85,17 @@ const MemberSchema = new mongoose.Schema(
     lastMessage: { type: String, default: '' },
     requestCount: { type: Number, default: 0 },
     pendingAction: { type: PendingActionSchema, default: null },
+    // Expo push tokens registered by the mobile app. Duplicates are
+    // de-duplicated on every /push-token POST so a member who reinstalls
+    // never accumulates dead tokens.
+    pushTokens: {
+      type: [{
+        token: { type: String, required: true },
+        platform: { type: String, default: '' },
+        addedAt: { type: Date, default: Date.now },
+      }],
+      default: [],
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

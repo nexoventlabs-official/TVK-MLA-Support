@@ -12,10 +12,12 @@ export default function DashboardScreen({ navigation }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await admin.getDashboardStats();
-      setData(res);
-    } catch (err) {
-      // surface silently — Screen still shows the rest
+      const [stats, recent] = await Promise.all([
+        admin.getDashboardStats().catch(() => ({})),
+        admin.getServiceRequests({ limit: 5 }).catch(() => ({})),
+      ]);
+      const recentList = (recent?.requests || recent?.items || []).slice(0, 5);
+      setData({ ...stats, recentRequests: recentList });
     } finally {
       setLoading(false);
       setRefreshing(false);

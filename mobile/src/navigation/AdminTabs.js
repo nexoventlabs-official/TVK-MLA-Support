@@ -3,23 +3,27 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
 import DashboardScreen from '../screens/admin/DashboardScreen';
-import Placeholder from '../screens/Placeholder';
+import ServiceRequestsScreen from '../screens/admin/ServiceRequestsScreen';
+import ServiceRequestDetailScreen from '../screens/admin/ServiceRequestDetailScreen';
+import MembersScreen from '../screens/admin/MembersScreen';
+import MemberDetailScreen from '../screens/admin/MemberDetailScreen';
+import MoreScreen from '../screens/admin/MoreScreen';
+import VotersScreen from '../screens/admin/VotersScreen';
+import VoterDetailScreen from '../screens/admin/VoterDetailScreen';
+import CampaignsScreen from '../screens/admin/CampaignsScreen';
+import AdminEventsScreen from '../screens/admin/AdminEventsScreen';
+import FlowImagesScreen from '../screens/admin/FlowImagesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const stub = (name, description) => (props) =>
-  <Placeholder {...props} name={name} description={description} />;
-
 function DashboardStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DashboardHome" component={DashboardScreen} />
-      <Stack.Screen name="ServiceRequestDetail" options={{ headerShown: true, title: 'Ticket' }}>
-        {stub('Ticket detail', 'Phase 3 — ticket detail + status update.')}
-      </Stack.Screen>
+      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} options={{ headerShown: true, title: 'Ticket' }} />
     </Stack.Navigator>
   );
 }
@@ -27,12 +31,8 @@ function DashboardStack() {
 function RequestsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
-      <Stack.Screen name="ServiceRequests" options={{ title: 'Service Requests' }}>
-        {stub('Service Requests', 'Phase 3 — searchable list of all tickets.')}
-      </Stack.Screen>
-      <Stack.Screen name="ServiceRequestDetail" options={{ title: 'Ticket' }}>
-        {stub('Ticket detail', 'Phase 3 — ticket detail + status update.')}
-      </Stack.Screen>
+      <Stack.Screen name="ServiceRequests" component={ServiceRequestsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} options={{ title: 'Ticket' }} />
     </Stack.Navigator>
   );
 }
@@ -40,12 +40,9 @@ function RequestsStack() {
 function MembersStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
-      <Stack.Screen name="Members" options={{ title: 'Members' }}>
-        {stub('Members', 'Phase 3 — searchable list of all members.')}
-      </Stack.Screen>
-      <Stack.Screen name="MemberDetail" options={{ title: 'Member' }}>
-        {stub('Member detail', 'Phase 3 — member profile + grievance history.')}
-      </Stack.Screen>
+      <Stack.Screen name="Members" component={MembersScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Member' }} />
+      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} options={{ title: 'Ticket' }} />
     </Stack.Navigator>
   );
 }
@@ -53,24 +50,13 @@ function MembersStack() {
 function MoreStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
-      <Stack.Screen name="MoreHome" options={{ title: 'More' }}>
-        {stub('More', 'Voters · Campaigns · Events · Flow Images · Profile.')}
-      </Stack.Screen>
-      <Stack.Screen name="Voters" options={{ title: 'Voters' }}>
-        {stub('Voters', 'Phase 3 — voter DB search.')}
-      </Stack.Screen>
-      <Stack.Screen name="VoterDetail" options={{ title: 'Voter' }}>
-        {stub('Voter detail', 'Phase 3 — full voter record.')}
-      </Stack.Screen>
-      <Stack.Screen name="Campaigns" options={{ title: 'Campaigns' }}>
-        {stub('Campaigns', 'Phase 3 — campaign list + status.')}
-      </Stack.Screen>
-      <Stack.Screen name="Events" options={{ title: 'Events' }}>
-        {stub('Events', 'Phase 3 — event admin CRUD.')}
-      </Stack.Screen>
-      <Stack.Screen name="FlowImages" options={{ title: 'Flow Images' }}>
-        {stub('Flow Images', 'Phase 3 — banner image management.')}
-      </Stack.Screen>
+      <Stack.Screen name="MoreHome" component={MoreScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Voters" component={VotersScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="VoterDetail" component={VoterDetailScreen} options={{ title: 'Voter' }} />
+      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} options={{ title: 'Ticket' }} />
+      <Stack.Screen name="Campaigns" component={CampaignsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Events" component={AdminEventsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="FlowImages" component={FlowImagesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Stack.Navigator>
   );

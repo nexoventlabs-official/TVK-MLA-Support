@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY, ROLE_KEY, USER_KEY } from '../api/client';
 import * as auth from '../api/auth';
+import { registerForPushNotifications } from '../services/pushNotifications';
 
 const AuthContext = createContext(null);
 
@@ -58,7 +59,10 @@ export function AuthProvider({ children }) {
         // 401/403 => signout. Network errors => leave session intact.
         const status = err?.response?.status;
         if (status === 401 || status === 403) await signOut();
+        return;
       }
+      // Token survived revalidation — (re)register for push. Best-effort.
+      registerForPushNotifications(role).catch(() => {});
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrating]);
@@ -68,6 +72,7 @@ export function AuthProvider({ children }) {
     await persist('admin', data.token, data.user);
     setRole('admin');
     setUser(data.user);
+    registerForPushNotifications('admin').catch(() => {});
     return data;
   }, []);
 
@@ -82,6 +87,7 @@ export function AuthProvider({ children }) {
     await persist('user', data.token, u);
     setRole('user');
     setUser(u);
+    registerForPushNotifications('user').catch(() => {});
     return data;
   }, []);
 
