@@ -30,7 +30,7 @@ export default function Footer() {
               className="object-contain object-bottom" 
               style={{position:'absolute',height:'100%',width:'100%',left:0,top:0,right:0,bottom:0,color:'transparent'}} 
               sizes="(min-width:768px) 30vw" 
-              src="/mla.png" 
+              src="/footer.png" 
             />
           </div>
         </div>
