@@ -130,7 +130,7 @@ export default function LandingPage() {
                   alt="" 
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] md:w-[220%] max-w-none z-0 pointer-events-none"
                 />
-                <img src="/mla.png" alt="MLA Venkatramanan" className="relative z-10 w-full h-auto block drop-shadow-[0_20px_20px_rgba(0,0,0,0.5)]" />
+                <img src="/footer.png" alt="MLA Venkatramanan" className="relative z-10 w-full h-auto block drop-shadow-[0_20px_20px_rgba(0,0,0,0.5)]" />
               </div>
             </div>
 
