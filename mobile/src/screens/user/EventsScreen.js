@@ -1,9 +1,11 @@
+import { Image } from 'expo-image';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';;
 import Screen from '../../components/Screen';
 import { Card } from '../../components/Card';
 import { colors, spacing, typography, radius } from '../../theme';
 import * as portal from '../../api/portal';
+import { thumb } from '../../utils/cloudinary';
 
 export default function EventsScreen({ navigation }) {
   const [events, setEvents] = useState([]);
@@ -38,8 +40,8 @@ export default function EventsScreen({ navigation }) {
             onPress={() => navigation.navigate('EventDetail', { id: ev._id })}
             style={{ marginBottom: spacing.md, padding: 0, overflow: 'hidden' }}
           >
-            {ev.imageUrl ? (
-              <Image source={{ uri: ev.imageUrl }} style={styles.cover} />
+            {ev.image ? (
+              <Image source={{ uri: thumb(ev.image, 800) }} style={styles.cover} contentFit="contain" />
             ) : (
               <View style={[styles.cover, styles.coverFallback]}>
                 <Text style={styles.coverEmoji}>📅</Text>
@@ -48,8 +50,8 @@ export default function EventsScreen({ navigation }) {
             <View style={{ padding: spacing.lg }}>
               <Text style={styles.date}>{fmtRange(ev.fromDate, ev.toDate)}</Text>
               <Text style={styles.title}>{ev.title}</Text>
-              {ev.venue ? <Text style={styles.venue} numberOfLines={1}>📍 {ev.venue}</Text> : null}
-              {ev.summary ? <Text style={styles.summary} numberOfLines={2}>{ev.summary}</Text> : null}
+              {ev.location ? <Text style={styles.venue} numberOfLines={1}>📍 {ev.location}</Text> : null}
+              {ev.description ? <Text style={styles.summary} numberOfLines={2}>{ev.description}</Text> : null}
             </View>
           </Card>
         ))

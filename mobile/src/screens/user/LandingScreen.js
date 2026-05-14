@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';;
 import Screen from '../../components/Screen';
 import { Card, StatCard } from '../../components/Card';
 import Button from '../../components/Button';
@@ -31,66 +32,82 @@ export default function LandingScreen({ navigation }) {
   useEffect(() => { load(); }, [load]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
-  const greet = user?.name ? `Vanakkam, ${user.name.split(' ')[0]} 🙏` : 'Vanakkam 🙏';
+  const greet = user?.name ? user.name : 'Welcome';
 
   return (
     <Screen
-      title={greet}
-      subtitle="TVK Mylapore citizen services"
       refreshing={refreshing}
       onRefresh={onRefresh}
-      loading={loading}
     >
+      {/* Custom Profile Header */}
+      <View style={styles.topHeader}>
+        <Pressable style={styles.avatarWrap} onPress={() => navigation.navigate('ProfileTab')}>
+          <Text style={styles.avatarText}>
+            {user?.name ? user.name.charAt(0).toUpperCase() : '👤'}
+          </Text>
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greetingText}>{greet}</Text>
+          <Text style={styles.subGreetingText}>TVK Mylapore citizen services</Text>
+        </View>
+      </View>
+
       {/* Hero CTA — raise a new grievance */}
-      <Card style={styles.hero}>
-        <Text style={styles.heroTitle}>Need help with a civic issue?</Text>
-        <Text style={styles.heroBody}>
-          Raise a grievance in under a minute. Attach a photo + your location and we'll dispatch a field team.
-        </Text>
-        <Button
-          label="Raise a Grievance"
-          onPress={() => navigation.navigate('NewGrievance')}
-          style={{ marginTop: spacing.md }}
-        />
-      </Card>
+      <View style={styles.heroWrap}>
+        <View style={styles.heroContent}>
+          <View style={styles.heroBadgeRow}>
+            <View style={styles.heroBadgeDot} />
+            <Text style={styles.heroBadgeText}>PORTAL ACTIVE</Text>
+          </View>
+          
+          <Text style={styles.heroTitle}>
+            Voice of Mylapore,{'\n'}
+            <Text style={{ color: colors.tvkYellow }}>Heard by TVK.</Text>
+          </Text>
+
+          <Text style={styles.heroBody}>
+            Raise issues directly to MLA Venkatramanan. Track real-time progress.
+          </Text>
+
+          <View style={styles.heroActions}>
+            <Button
+              fullWidth={false}
+              label="File a Grievance"
+              onPress={() => navigation.navigate('GrievancesTab')}
+              style={styles.heroBtn}
+              textStyle={styles.heroBtnText}
+            />
+            <Button
+              fullWidth={false}
+              label="My Requests"
+              variant="secondary"
+              onPress={() => navigation.navigate('RequestsTab')}
+              style={styles.heroBtnOutline}
+              textStyle={{ color: '#fff' }}
+            />
+          </View>
+        </View>
+
+        <Image source={require('../../../assets/mla.png')} style={styles.heroImage} />
+      </View>
 
       {/* Public stats */}
       {stats && (
-        <View style={styles.statsRow}>
-          <StatCard
-            label="Received"
-            value={String(stats.totalReceived ?? 0)}
-            helper="Total grievances"
-          />
-          <StatCard
-            label="Resolved"
-            value={String(stats.totalResolved ?? 0)}
-            helper="Closed successfully"
-            accent={colors.statusCompleted}
-          />
+        <View style={styles.statsBar}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{String(stats.totalReceived ?? 0)}</Text>
+            <Text style={styles.statLabel}>RECEIVED</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{String(stats.totalResolved ?? 0)}</Text>
+            <Text style={styles.statLabel}>RESOLVED</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{stats.avgResponseTime || '—'}</Text>
+            <Text style={styles.statLabel}>AVG TIME</Text>
+          </View>
         </View>
       )}
-      {stats?.avgResponseTime && (
-        <Card style={{ marginTop: spacing.md }}>
-          <Text style={styles.metricLabel}>Avg. response time</Text>
-          <Text style={styles.metricValue}>{stats.avgResponseTime}</Text>
-        </Card>
-      )}
-
-      {/* Quick actions */}
-      <Text style={styles.sectionTitle}>Quick actions</Text>
-      <View style={styles.actionsGrid}>
-        <ActionTile
-          label="My Grievances"
-          helper="Track your tickets"
-          onPress={() => navigation.navigate('MyGrievances')}
-        />
-        <ActionTile
-          label="Events"
-          helper="Upcoming TVK events"
-          onPress={() => navigation.navigate('Events')}
-        />
-      </View>
 
       {/* Upcoming events preview */}
       {events.length > 0 && (
@@ -104,12 +121,12 @@ export default function LandingScreen({ navigation }) {
                 style={styles.eventCard}
               >
                 <Text style={styles.eventDate}>
-                  {ev.startsAt ? new Date(ev.startsAt).toLocaleDateString('en-IN', {
+                  {ev.fromDate ? new Date(ev.fromDate).toLocaleDateString('en-IN', {
                     day: '2-digit', month: 'short',
                   }) : '—'}
                 </Text>
                 <Text style={styles.eventTitle} numberOfLines={2}>{ev.title}</Text>
-                {ev.venue && <Text style={styles.eventVenue} numberOfLines={1}>{ev.venue}</Text>}
+                {ev.location && <Text style={styles.eventVenue} numberOfLines={1}>{ev.location}</Text>}
               </Card>
             ))}
           </ScrollView>
@@ -119,34 +136,68 @@ export default function LandingScreen({ navigation }) {
   );
 }
 
-function ActionTile({ label, helper, onPress }) {
-  return (
-    <Card onPress={onPress} style={styles.tile}>
-      <Text style={styles.tileLabel}>{label}</Text>
-      <Text style={styles.tileHelper}>{helper}</Text>
-    </Card>
-  );
-}
-
 const styles = StyleSheet.create({
-  hero: {
-    backgroundColor: colors.brand800,
-    borderColor: colors.brand800,
-  },
-  heroTitle: { ...typography.h2, color: '#fff' },
-  heroBody: { ...typography.body, color: colors.brand100, marginTop: 4 },
-  statsRow: {
+  topHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
-    marginTop: spacing.md,
+    marginBottom: spacing.lg,
   },
-  metricLabel: { ...typography.captionBold, color: colors.textMuted, textTransform: 'uppercase' },
-  metricValue: { ...typography.h1, color: colors.brand700, marginTop: 4 },
+  avatarWrap: {
+    width: 50, height: 50, borderRadius: 25,
+    backgroundColor: '#FFD700',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText: { fontSize: 22, fontWeight: '900', color: '#990000' },
+  greetingText: { ...typography.display, color: colors.text, fontSize: 24 },
+  subGreetingText: { ...typography.captionBold, color: colors.textMuted, marginTop: 2, letterSpacing: 0.5 },
+  heroWrap: {
+    backgroundColor: '#990000',
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    marginBottom: spacing.xl,
+  },
+  heroContent: {
+    padding: spacing.xl,
+    paddingBottom: 160,
+    position: 'relative',
+    zIndex: 2,
+  },
+  heroBadgeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(255,215,0,0.2)',
+    alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill,
+    marginBottom: spacing.md,
+  },
+  heroBadgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFD700' },
+  heroBadgeText: { color: '#FFD700', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  heroTitle: { ...typography.h1, fontSize: 26, color: '#fff', lineHeight: 32 },
+  heroBody: { ...typography.body, color: 'rgba(255,255,255,0.8)', marginTop: spacing.sm, maxWidth: '85%' },
+  heroActions: { flexDirection: 'column', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.lg },
+  heroBtn: { backgroundColor: '#FFD700', borderColor: '#FFD700', paddingHorizontal: spacing.xl },
+  heroBtnText: { color: '#990000', fontWeight: '800' },
+  heroBtnOutline: { backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,0.3)', paddingHorizontal: spacing.xl },
+  heroImage: {
+    position: 'absolute',
+    bottom: -30,
+    right: -30,
+    width: 260,
+    height: 300,
+    resizeMode: 'contain',
+    zIndex: 1,
+    opacity: 1,
+  },
+  statsBar: {
+    backgroundColor: '#FFD700',
+    borderRadius: radius.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  statItem: { alignItems: 'center' },
+  statValue: { ...typography.display, color: '#990000', fontSize: 28 },
+  statLabel: { ...typography.captionBold, color: 'rgba(153,0,0,0.8)', marginTop: 4, letterSpacing: 1 },
   sectionTitle: { ...typography.h3, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.sm },
-  actionsGrid: { flexDirection: 'row', gap: spacing.md },
-  tile: { flex: 1 },
-  tileLabel: { ...typography.bodyBold, color: colors.text },
-  tileHelper: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
   eventCard: { width: 220 },
   eventDate: { ...typography.captionBold, color: colors.brand600, textTransform: 'uppercase' },
   eventTitle: { ...typography.bodyBold, color: colors.text, marginTop: 4 },

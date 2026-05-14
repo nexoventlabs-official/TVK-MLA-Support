@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, Linking, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Linking, Pressable } from 'react-native';;
 import Screen from '../../components/Screen';
 import { Card, Badge } from '../../components/Card';
 import { colors, spacing, typography, radius, statusColor } from '../../theme';

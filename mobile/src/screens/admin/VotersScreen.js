@@ -3,9 +3,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import Screen from '../../components/Screen';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
-import { Card } from '../../components/Card';
-import { colors, spacing, typography } from '../../theme';
+import { Card, Badge } from '../../components/Card';
+import { colors, spacing, typography, radius } from '../../theme';
 import * as admin from '../../api/admin';
+import { Feather } from '@expo/vector-icons';
 
 export default function VotersScreen({ navigation }) {
   const [items, setItems] = useState([]);
@@ -28,7 +29,8 @@ export default function VotersScreen({ navigation }) {
   useEffect(() => { load(1); }, []);
 
   return (
-    <Screen title="Voters" subtitle="Read-only voter roll">
+    <Screen showBack={true} title="Voters List">
+
       <Input
         placeholder="Search by name, EPIC, house no…"
         value={q}
@@ -36,7 +38,7 @@ export default function VotersScreen({ navigation }) {
         returnKeyType="search"
         onSubmitEditing={() => load(1)}
       />
-      <View style={{ height: spacing.md }} />
+      <View style={{ height: spacing.lg }} />
 
       {items.length === 0 ? (
         <Card><Text style={styles.empty}>{loading ? 'Loading…' : 'Enter a search term to find voters.'}</Text></Card>
@@ -45,11 +47,17 @@ export default function VotersScreen({ navigation }) {
           <Card
             key={v._id || v.epicNo}
             onPress={() => navigation.navigate('VoterDetail', { id: v._id || v.epicNo })}
-            style={styles.row}
+            style={styles.card}
           >
-            <Text style={styles.name}>{v.name || '—'}</Text>
-            <Text style={styles.meta}>{v.epicNo} · {v.gender} · House {v.houseNo || '—'}</Text>
-            {v.assemblyName && <Text style={styles.meta}>{v.assemblyName} ({v.assemblyNo})</Text>}
+            <View style={styles.iconBox}>
+              <Feather name="user" size={20} color={colors.brand700} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name}>{v.name || '—'}</Text>
+              <Text style={styles.meta}>{v.gender} · House {v.houseNo || '—'}</Text>
+              {v.assemblyName && <Text style={styles.meta}>{v.assemblyName} ({v.assemblyNo})</Text>}
+            </View>
+            <Badge label={v.epicNo} color={colors.brand700} soft />
           </Card>
         ))
       )}
@@ -62,8 +70,23 @@ export default function VotersScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  row: { marginBottom: spacing.sm },
-  name: { ...typography.bodyBold, color: colors.text },
+  header: { marginBottom: spacing.lg },
+  headerBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: 'rgba(255,215,0,0.2)', alignSelf: 'flex-start',
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill,
+    marginBottom: spacing.xs,
+  },
+  headerBadgeText: { color: '#FFD700', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  headerTitle: { ...typography.h1, fontSize: 28, color: colors.text },
+  
+  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm, paddingVertical: spacing.md },
+  iconBox: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: 'rgba(153,0,0,0.05)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  name: { ...typography.bodyBold, color: colors.text, fontSize: 16 },
   meta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
   empty: { color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.lg },
 });

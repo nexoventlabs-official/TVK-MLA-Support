@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import Screen from '../../components/Screen';
 import Input from '../../components/Input';
 import { Card, Badge } from '../../components/Card';
@@ -14,6 +14,7 @@ export default function MembersScreen({ navigation }) {
   const [onlyRegistered, setOnlyRegistered] = useState(false);
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const params = {};
       if (q.trim()) params.q = q.trim();
@@ -50,7 +51,9 @@ export default function MembersScreen({ navigation }) {
 
       <View style={{ height: spacing.md }} />
 
-      {loading ? null : items.length === 0 ? (
+      {loading ? (
+        <ActivityIndicator color={colors.brand700} style={{ paddingVertical: spacing.xl }} />
+      ) : items.length === 0 ? (
         <Card><Text style={styles.empty}>No matching members.</Text></Card>
       ) : (
         items.map((m) => (

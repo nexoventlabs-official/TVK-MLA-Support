@@ -388,17 +388,29 @@ const STATUS_LABEL = {
   rejected: 'Rejected',
 };
 
-async function buildMyRequestsList(phone) {
+async function buildMyRequestsList(phone, images = {}) {
   if (!phone) return [];
   const items = await ServiceRequest.find({ phone, ticketId: { $ne: null } })
     .sort({ createdAt: -1 })
     .limit(20)
     .lean();
-  return items.map((r) => ({
-    id: String(r._id),
-    title: `${r.ticketId} · ${STATUS_LABEL[r.status] || r.status}`,
-    description: `${r.optionTitle || ''}${r.createdAt ? ' · ' + formatEventDate(r.createdAt) : ''}`.slice(0, 60),
-  }));
+  return items.map((r) => {
+    // Resolve the same icon used in OPTION_SELECT so the user immediately
+    // recognises the issue. Falls back to the service-level icon, and
+    // finally to no image so a missing FlowImage upload can't break the
+    // list (RadioButtonsGroup is happy without `image`).
+    const svc = getServiceById(r.serviceId);
+    const opt = svc?.options?.find((o) => o.id === r.optionId);
+    const iconKey = opt?.iconKey || svc?.iconKey || '';
+    return withImage(
+      {
+        id: String(r._id),
+        title: `${r.ticketId} · ${STATUS_LABEL[r.status] || r.status}`,
+        description: `${r.optionTitle || ''}${r.createdAt ? ' · ' + formatEventDate(r.createdAt) : ''}`.slice(0, 60),
+      },
+      iconKey ? images[iconKey] : ''
+    );
+  });
 }
 
 /* ───────── data_exchange ───────── */
@@ -410,7 +422,7 @@ async function handleDataExchange({ screen, data, flow_token }) {
   if (screen === 'MAIN_MENU') {
     const sel = String(data?.selected_main || '').trim();
     if (sel === 'my_requests') {
-      const requests = await buildMyRequestsList(phone);
+      const requests = await buildMyRequestsList(phone, images);
       if (!requests.length) {
         return infoScreen({
           title: 'No requests yet',

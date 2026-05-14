@@ -8,6 +8,9 @@ export const adminVerify = () =>
   client.get('/auth/verify').then((r) => r.data);
 
 // Citizen (portal, OTP-based)
+export const portalLookupEpic = ({ epic, phone, dob }) =>
+  client.post('/portal/auth/lookup-epic', { epic, phone, dob }).then((r) => r.data);
+
 export const portalSendOtp = (phone, mode = 'login') =>
   client.post('/portal/auth/send-otp', { phone, mode }).then((r) => r.data);
 

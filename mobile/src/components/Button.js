@@ -11,6 +11,7 @@ export default function Button({
   disabled = false,
   icon,
   style,
+  textStyle,
   fullWidth = true,
 }) {
   const s = computeStyle(variant, size, disabled || loading);
@@ -22,6 +23,7 @@ export default function Button({
         fullWidth && { alignSelf: 'stretch' },
         pressed && !disabled && !loading && { opacity: 0.85 },
         style,
+        (disabled || loading) && { opacity: 0.5 },
       ]}
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
@@ -31,7 +33,7 @@ export default function Button({
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
           {icon}
-          <Text style={s.text}>{label}</Text>
+          <Text style={[s.text, textStyle]}>{label}</Text>
         </View>
       )}
     </Pressable>
@@ -52,9 +54,9 @@ function computeStyle(variant, size, disabled) {
     text: { ...typography.bodyBold, fontSize: size === 'sm' ? 13 : 15 },
   };
   if (variant === 'primary') {
-    base.button.backgroundColor = disabled ? colors.brand300 : colors.brand700;
-    base.button.borderColor = disabled ? colors.brand300 : colors.brand700;
-    base.text.color = '#fff';
+    base.button.backgroundColor = disabled ? colors.brand300 : colors.tvkYellow;
+    base.button.borderColor = disabled ? colors.brand300 : colors.tvkYellow;
+    base.text.color = colors.brand700;
   } else if (variant === 'secondary') {
     base.button.backgroundColor = '#fff';
     base.button.borderColor = colors.borderStrong;

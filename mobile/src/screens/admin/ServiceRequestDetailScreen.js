@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, Pressable, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Linking } from 'react-native';;
 import Screen from '../../components/Screen';
 import { Card, Badge } from '../../components/Card';
 import Button from '../../components/Button';
@@ -54,7 +55,7 @@ export default function ServiceRequestDetailScreen({ route, navigation }) {
   };
 
   return (
-    <Screen title={item.ticketId} subtitle={item.optionTitle || item.serviceTitle}>
+    <Screen showBack={true} title={item.ticketId} subtitle={item.optionTitle || item.serviceTitle}>
       <View style={styles.statusRow}>
         <Badge label={item.status} color={statusColor(item.status)} soft />
         <Text style={styles.created}>{fmtDateTime(item.createdAt)}</Text>

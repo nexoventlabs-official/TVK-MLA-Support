@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '../theme';
 
@@ -16,7 +18,9 @@ export default function Screen({
   contentStyle,
   edges = ['top', 'bottom'],
   rightAction,
+  showBack = false,
 }) {
+  const navigation = useNavigation();
   const Body = scroll ? ScrollView : View;
   const refreshProps =
     scroll && onRefresh
@@ -34,8 +38,13 @@ export default function Screen({
 
   return (
     <SafeAreaView style={[styles.root, style]} edges={edges}>
-      {(title || subtitle) && (
+      {(title || subtitle || showBack) && (
         <View style={styles.header}>
+          {showBack && (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: spacing.sm }}>
+              <Feather name="arrow-left" size={24} color={colors.text} />
+            </TouchableOpacity>
+          )}
           <View style={{ flex: 1 }}>
             {title && <Text style={styles.title}>{title}</Text>}
             {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
@@ -47,7 +56,7 @@ export default function Screen({
         style={styles.body}
         contentContainerStyle={[
           padded && styles.padded,
-          scroll && { paddingBottom: spacing.xxl },
+          scroll && { paddingBottom: 110 },
           contentStyle,
         ]}
         keyboardShouldPersistTaps="handled"

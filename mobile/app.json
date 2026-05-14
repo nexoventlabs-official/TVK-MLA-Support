@@ -61,7 +61,7 @@
       "expo-secure-store"
     ],
     "extra": {
-      "apiBaseUrl": "https://your-backend.example.com/api",
+      "apiBaseUrl": "https://tvk-mla-support.onrender.com/api",
       "eas": {
         "projectId": ""
       }

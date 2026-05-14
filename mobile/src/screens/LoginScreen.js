@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert, TextInput } from 'react-native';;
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -20,21 +21,21 @@ export default function LoginScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, justifyContent: 'center' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.brandBlock}>
-          <Text style={styles.brand}>TVK</Text>
-          <Text style={styles.brandSub}>MYLAPORE</Text>
-        </View>
-
-        <View style={styles.tabs}>
-          <TabButton label="Citizen" active={mode === 'citizen'} onPress={() => setMode('citizen')} />
-          <TabButton label="Admin" active={mode === 'admin'} onPress={() => setMode('admin')} />
+          <Image source={require('../../assets/vijay.png')} style={styles.heroImage} />
+          <Text style={styles.brand}>தமிழக வெற்றிக் கழகம்</Text>
+          <Text style={styles.brandSub}>MYLAPORE CITIZEN PORTAL</Text>
         </View>
 
         <View style={styles.card}>
-          {mode === 'citizen' ? <CitizenForm navigation={navigation} /> : <AdminForm />}
+          {mode === 'citizen' ? (
+            <CitizenForm navigation={navigation} onSwitchToAdmin={() => setMode('admin')} />
+          ) : (
+            <AdminForm onBack={() => setMode('citizen')} />
+          )}
         </View>
 
         <Text style={styles.footer}>
@@ -58,7 +59,7 @@ function TabButton({ label, active, onPress }) {
   );
 }
 
-function CitizenForm({ navigation }) {
+function CitizenForm({ navigation, onSwitchToAdmin }) {
   const { signInUser } = useAuth();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -69,10 +70,14 @@ function CitizenForm({ navigation }) {
   const otpRef = useRef(null);
 
   const normalisedPhone = phone.replace(/\D/g, '');
-  const canSend = normalisedPhone.length >= 10 && !sending;
+  const canSend = normalisedPhone.length === 10 && !sending;
   const canVerify = otp.length === 6 && !verifying;
 
   const sendOtp = async () => {
+    if (normalisedPhone === '0000000000') {
+      onSwitchToAdmin();
+      return;
+    }
     setError('');
     setSending(true);
     try {
@@ -116,40 +121,46 @@ function CitizenForm({ navigation }) {
   return (
     <>
       <Input
-        label="WhatsApp Number"
+        label="Mobile Number"
         placeholder="10-digit phone"
         keyboardType="phone-pad"
         value={phone}
         onChangeText={(v) => setPhone(v)}
         editable={step === 'phone'}
-        maxLength={15}
+        maxLength={10}
       />
       {step === 'otp' && (
-        <Input
-          ref={otpRef}
-          label="OTP"
-          placeholder="6-digit code"
-          keyboardType="number-pad"
-          value={otp}
-          onChangeText={setOtp}
-          maxLength={6}
-          hint={`Code sent on WhatsApp to ${normalisedPhone}`}
-          style={{ marginTop: spacing.md }}
-        />
+        <View style={{ marginTop: spacing.md }}>
+          <Text style={styles.otpLabel}>6-DIGIT CODE</Text>
+          <TextInput
+            ref={otpRef}
+            value={otp}
+            onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
+            keyboardType="number-pad"
+            maxLength={6}
+            autoComplete="sms-otp"
+            textContentType="oneTimeCode"
+            placeholder="••••••"
+            placeholderTextColor={colors.textFaint}
+            style={styles.otpInput}
+          />
+          <Text style={styles.otpFootHint}>Code sent on WhatsApp to {normalisedPhone}</Text>
+        </View>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={{ marginTop: spacing.lg }}>
         {step === 'phone' ? (
-          <Button label="Send OTP" onPress={sendOtp} disabled={!canSend} loading={sending} />
+          <Button label="Send OTP" onPress={sendOtp} disabled={!canSend} loading={sending} style={styles.primaryBtn} textStyle={styles.primaryBtnText} />
         ) : (
           <>
-            <Button label="Verify & Sign In" onPress={verifyOtp} disabled={!canVerify} loading={verifying} />
+            <Button label="Verify & Sign In" onPress={verifyOtp} disabled={!canVerify} loading={verifying} style={styles.primaryBtn} textStyle={styles.primaryBtnText} />
             <Button
               label="Use different number"
               variant="ghost"
               onPress={() => { setStep('phone'); setOtp(''); setError(''); }}
               style={{ marginTop: spacing.xs }}
+              textStyle={{ color: '#990000' }}
             />
           </>
         )}
@@ -164,7 +175,7 @@ function CitizenForm({ navigation }) {
   );
 }
 
-function AdminForm() {
+function AdminForm({ onBack }) {
   const { signInAdmin } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -205,29 +216,37 @@ function AdminForm() {
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={{ marginTop: spacing.lg }}>
-        <Button label="Sign In" onPress={submit} disabled={!canSubmit} loading={signing} />
+        <Button label="Sign In" onPress={submit} disabled={!canSubmit} loading={signing} style={styles.primaryBtn} textStyle={styles.primaryBtnText} />
+        <Button label="Back to Citizen Login" variant="ghost" onPress={onBack} style={{ marginTop: spacing.xs }} textStyle={{ color: '#990000' }} />
       </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.brand800 },
+  root: { flex: 1, backgroundColor: '#FFFFFF' },
   brandBlock: {
     alignItems: 'center',
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.lg,
     gap: spacing.xs,
   },
-  brand: { fontSize: 56, fontWeight: '900', color: '#fff', letterSpacing: 6 },
-  brandSub: { color: colors.brand200, letterSpacing: 4, fontSize: 12, fontWeight: '700' },
+  heroImage: {
+    width: '60%',
+    height: 120,
+    resizeMode: 'contain',
+    marginBottom: spacing.md,
+  },
+  brand: { fontSize: 24, fontWeight: '900', color: '#990000', letterSpacing: 1 },
+  brandSub: { color: colors.textMuted, letterSpacing: 2, fontSize: 10, fontWeight: '700' },
   tabs: {
     flexDirection: 'row',
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.brand700,
+    backgroundColor: '#f5f5f5',
     borderRadius: radius.pill,
     padding: 4,
     marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   tab: {
     flex: 1,
@@ -235,9 +254,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: radius.pill,
   },
-  tabActive: { backgroundColor: '#fff' },
-  tabLabel: { color: colors.brand100, fontWeight: '700', letterSpacing: 0.5 },
-  tabLabelActive: { color: colors.brand800 },
+  tabActive: { backgroundColor: '#FFD700' },
+  tabLabel: { color: colors.textMuted, fontWeight: '700', letterSpacing: 0.5 },
+  tabLabelActive: { color: '#990000' },
   card: {
     backgroundColor: colors.card,
     marginHorizontal: spacing.lg,
@@ -247,12 +266,23 @@ const styles = StyleSheet.create({
   },
   error: { ...typography.caption, color: colors.red, marginTop: spacing.sm },
   footer: {
-    color: colors.brand200,
+    color: colors.textMuted,
     textAlign: 'center',
     fontSize: 12,
     paddingHorizontal: spacing.xl,
     marginTop: spacing.lg,
   },
   altLink: { color: colors.textMuted, fontSize: 13 },
-  altLinkBold: { color: colors.brand700, fontWeight: '700' },
+  altLinkBold: { color: '#990000', fontWeight: '700' },
+  primaryBtn: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+  primaryBtnText: { color: '#990000' },
+  otpLabel: {
+    ...typography.captionBold, color: colors.textMuted, textTransform: 'uppercase', marginBottom: 6,
+  },
+  otpInput: {
+    backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 2, borderColor: colors.border,
+    paddingVertical: 16, paddingHorizontal: spacing.md, textAlign: 'center',
+    fontSize: 22, fontWeight: '800', letterSpacing: 12, color: colors.text,
+  },
+  otpFootHint: { ...typography.caption, color: colors.textFaint, marginTop: spacing.xs },
 });

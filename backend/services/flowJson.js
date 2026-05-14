@@ -114,6 +114,7 @@ function buildFlowJSON() {
                 id: { type: 'string' },
                 title: { type: 'string' },
                 description: { type: 'string' },
+                image: { type: 'string' },
               },
             },
             __example__: [{ id: 'TVK-2605-0001', title: 'TVK-2605-0001 · Pending', description: 'Road Repair · 7 May' }],

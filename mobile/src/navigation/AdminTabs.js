@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import DashboardScreen from '../screens/admin/DashboardScreen';
 import ServiceRequestsScreen from '../screens/admin/ServiceRequestsScreen';
 import ServiceRequestDetailScreen from '../screens/admin/ServiceRequestDetailScreen';
@@ -23,47 +24,48 @@ function DashboardStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DashboardHome" component={DashboardScreen} />
-      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} options={{ headerShown: true, title: 'Ticket' }} />
+      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} />
     </Stack.Navigator>
   );
 }
 
 function RequestsStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
-      <Stack.Screen name="ServiceRequests" component={ServiceRequestsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} options={{ title: 'Ticket' }} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ServiceRequests" component={ServiceRequestsScreen} />
+      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} />
     </Stack.Navigator>
   );
 }
 
 function MembersStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
-      <Stack.Screen name="Members" component={MembersScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Member' }} />
-      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} options={{ title: 'Ticket' }} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Members" component={MembersScreen} />
+      <Stack.Screen name="MemberDetail" component={MemberDetailScreen} />
+      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} />
     </Stack.Navigator>
   );
 }
 
 function MoreStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: true, headerTitleAlign: 'center' }}>
-      <Stack.Screen name="MoreHome" component={MoreScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Voters" component={VotersScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="VoterDetail" component={VoterDetailScreen} options={{ title: 'Voter' }} />
-      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} options={{ title: 'Ticket' }} />
-      <Stack.Screen name="Campaigns" component={CampaignsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Events" component={AdminEventsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="FlowImages" component={FlowImagesScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MoreHome" component={MoreScreen} />
+      <Stack.Screen name="Voters" component={VotersScreen} />
+      <Stack.Screen name="VoterDetail" component={VoterDetailScreen} />
+      <Stack.Screen name="ServiceRequestDetail" component={ServiceRequestDetailScreen} />
+      <Stack.Screen name="Campaigns" component={CampaignsScreen} />
+      <Stack.Screen name="Events" component={AdminEventsScreen} />
+      <Stack.Screen name="FlowImages" component={FlowImagesScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 }
 
-const tabIcon = (emoji) => () =>
-  <Text style={{ fontSize: 20 }}>{emoji}</Text>;
+const tabIcon = (name) => ({ color, size }) => (
+  <Feather name={name} color={color} size={size || 22} />
+);
 
 export default function AdminTabs() {
   return (
@@ -72,12 +74,33 @@ export default function AdminTabs() {
         headerShown: false,
         tabBarActiveTintColor: colors.brand700,
         tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 0,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 5 },
+          shadowOpacity: 0.1,
+          shadowRadius: 15,
+          position: 'absolute',
+          bottom: 20,
+          left: 20,
+          right: 20,
+          borderRadius: 30,
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontWeight: '600',
+          fontSize: 11,
+        },
       }}
     >
-      <Tab.Screen name="DashboardTab" component={DashboardStack} options={{ title: 'Dashboard', tabBarIcon: tabIcon('📊') }} />
-      <Tab.Screen name="RequestsTab" component={RequestsStack} options={{ title: 'Requests', tabBarIcon: tabIcon('📋') }} />
-      <Tab.Screen name="MembersTab" component={MembersStack} options={{ title: 'Members', tabBarIcon: tabIcon('👥') }} />
-      <Tab.Screen name="MoreTab" component={MoreStack} options={{ title: 'More', tabBarIcon: tabIcon('⚙️') }} />
+      <Tab.Screen name="DashboardTab" component={DashboardStack} options={{ title: 'Dashboard', tabBarIcon: tabIcon('bar-chart-2') }} />
+      <Tab.Screen name="RequestsTab" component={RequestsStack} options={{ title: 'Requests', tabBarIcon: tabIcon('inbox') }} />
+      <Tab.Screen name="MembersTab" component={MembersStack} options={{ title: 'Members', tabBarIcon: tabIcon('users') }} />
+      <Tab.Screen name="MoreTab" component={MoreStack} options={{ title: 'More', tabBarIcon: tabIcon('settings') }} />
     </Tab.Navigator>
   );
 }

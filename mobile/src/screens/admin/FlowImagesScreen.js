@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';;
 import Screen from '../../components/Screen';
 import { Card } from '../../components/Card';
 import { colors, spacing, typography, radius } from '../../theme';
@@ -21,6 +22,7 @@ export default function FlowImagesScreen() {
 
   return (
     <Screen
+      showBack={true}
       title="Flow Images"
       subtitle="WhatsApp + portal media library"
       refreshing={refreshing}
@@ -31,7 +33,7 @@ export default function FlowImagesScreen() {
         {items.map((img) => (
           <Card key={img._id || img.key} style={styles.tile}>
             {img.url ? (
-              <Image source={{ uri: img.url }} style={styles.thumb} resizeMode="cover" />
+              <Image source={{ uri: img.url }} style={styles.thumb} contentFit="cover" />
             ) : (
               <View style={[styles.thumb, styles.thumbEmpty]}>
                 <Text style={styles.emptyIcon}>🖼️</Text>

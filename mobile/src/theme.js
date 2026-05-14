@@ -3,17 +3,18 @@
 // background, near-black text).
 
 export const colors = {
-  // Primary brand greens (matches frontend `brand-*` palette)
-  brand50: '#f0f7f4',
-  brand100: '#daeae3',
-  brand200: '#b5d4c7',
-  brand300: '#8bb8a4',
-  brand400: '#5f9580',
-  brand500: '#3f7762',
-  brand600: '#2e604e',
-  brand700: '#234a3d',
-  brand800: '#173628',
-  brand900: '#0b1f17',
+  // Primary TVK Red Palette
+  brand50: '#fef2f2',
+  brand100: '#fee2e2',
+  brand200: '#fecaca',
+  brand300: '#fca5a5',
+  brand400: '#f87171',
+  brand500: '#ef4444',
+  brand600: '#dc2626',
+  brand700: '#990000', // Core TVK Red
+  brand800: '#800000',
+  brand900: '#660000',
+  tvkYellow: '#FFD700',
 
   // Accents
   red: '#c53030',
@@ -24,7 +25,7 @@ export const colors = {
   blueSoft: '#dbeafe',
 
   // Greys
-  bg: '#fafaf9',
+  bg: '#ffffff',
   card: '#ffffff',
   border: '#e7e5e4',
   borderStrong: '#d6d3d1',
